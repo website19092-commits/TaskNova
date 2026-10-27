@@ -6,16 +6,17 @@ from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 from aiohttp import web
 
-# আপনার নতুন টোকেন এখানে বসানো হয়েছে
+# ==========================================
 BOT_TOKEN = "8715331593:AAGGhE0Ghj-5fX7B691WWxGLojWPsgbW6T8"
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
+ADMIN_ID = "8021210361"  # আপনার টেলিগ্রাম আইডি
 PORT = int(os.environ.get("PORT", 8080))
+# ==========================================
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# ইউজারদের ভাষা মনে রাখার জন্য মেমরি (ডিফল্ট: English)
 user_langs = {}
 
 def get_text(key, lang="en", **kwargs):
@@ -54,55 +55,79 @@ async def cmd_start(message: types.Message):
         parse_mode="Markdown"
     )
 
-# ভাষা পরিবর্তনের কমান্ড (/lang)
 @dp.message(Command("lang"))
 async def cmd_lang(message: types.Message):
     current = user_langs.get(message.from_user.id, "en")
     new_lang = "bn" if current == "en" else "en"
     user_langs[message.from_user.id] = new_lang
-    
     msg = "Language changed to **English**." if new_lang == "en" else "ভাষা **বাংলা**-তে পরিবর্তন করা হয়েছে।"
     await message.answer(msg, reply_markup=get_main_keyboard(new_lang), parse_mode="Markdown")
 
 # ==========================================
-# বাটনগুলোর অ্যাকশন
+# 🚀 অ্যাডমিন প্যানেল (Admin Panel)
 # ==========================================
+@dp.message(Command("admin"))
+async def cmd_admin(message: types.Message):
+    # চেক করা হচ্ছে সে অ্যাডমিন কি না
+    if str(message.from_user.id) != ADMIN_ID:
+        await message.answer("⛔ দুঃখিত, আপনি এই কমান্ড ব্যবহার করার অনুমতি রাখেন না।")
+        return
+    
+    admin_kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="👤 Total Users"), KeyboardButton(text="📧 Add Gmail Data")],
+            [KeyboardButton(text="📢 Broadcast Message"), KeyboardButton(text="⬅️ Back to Main Menu")]
+        ],
+        resize_keyboard=True
+    )
+    await message.answer("👑 **Admin Panel**-এ স্বাগতম।\nনিচের মেনু থেকে কাজ বেছে নিন:", reply_markup=admin_kb, parse_mode="Markdown")
 
+@dp.message(F.text == "👤 Total Users")
+async def admin_stats(message: types.Message):
+    if str(message.from_user.id) == ADMIN_ID:
+        await message.answer("📊 **User Stats**\n\nTotal Users: 1 (You)\nActive Today: 1\n(ডাটাবেস যুক্ত হলে আসল ডেটা দেখাবে)")
+
+@dp.message(F.text == "📧 Add Gmail Data")
+async def admin_add_gmail(message: types.Message):
+    if str(message.from_user.id) == ADMIN_ID:
+        await message.answer("📧 এখানে আপনি ফরম্যাটে জিমেইলের ডেটা পাঠাতে পারবেন:\n`email | password | name`")
+
+@dp.message(F.text == "📢 Broadcast Message")
+async def admin_broadcast(message: types.Message):
+    if str(message.from_user.id) == ADMIN_ID:
+        await message.answer("📢 এখানে মেসেজ লিখে পাঠালে সব ইউজার পাবে।")
+
+@dp.message(F.text == "⬅️ Back to Main Menu")
+async def admin_back(message: types.Message):
+    lang = user_langs.get(message.from_user.id, "en")
+    await message.answer("মেইন মেনুতে ফিরে আসা হলো।", reply_markup=get_main_keyboard(lang))
+
+# ==========================================
+# সাধারণ বাটনগুলোর অ্যাকশন
+# ==========================================
 @dp.message(F.text.in_(["➕ Register Gmail", "➕ জিমেইল রেজিস্টার"]))
 async def btn_gmail(message: types.Message):
-    lang = user_langs.get(message.from_user.id, "en")
-    msg = "📧 Gmail registration system is coming soon! Use the Dashboard App for now." if lang == "en" else "📧 জিমেইল রেজিস্ট্রেশন সিস্টেম শীঘ্রই চালু হবে। ড্যাশবোর্ড অ্যাপ ব্যবহার করুন।"
-    await message.answer(msg)
+    await message.answer("📧 Gmail registration system is coming soon!")
 
 @dp.message(F.text.in_(["📧 My Accounts", "📧 আমার অ্যাকাউন্ট"]))
 async def btn_accounts(message: types.Message):
-    lang = user_langs.get(message.from_user.id, "en")
-    msg = "Your Gmail accounts list will appear here. (Under construction)" if lang == "en" else "আপনার অ্যাকাউন্টের তালিকা এখানে দেখা যাবে। (নির্মাণাধীন)"
-    await message.answer(msg)
+    await message.answer("Your Gmail accounts list will appear here. (Under construction)")
 
 @dp.message(F.text.in_(["💰 Balance", "💰 ব্যালেন্স"]))
 async def btn_balance(message: types.Message):
-    lang = user_langs.get(message.from_user.id, "en")
-    msg = "Your current balance: $0.00\n(Real balance is in the Dashboard App)" if lang == "en" else "আপনার বর্তমান ব্যালেন্স: $0.00\n(আসল ব্যালেন্স ড্যাশবোর্ডে দেখুন)"
-    await message.answer(msg)
+    await message.answer("Your current balance: $0.00")
 
 @dp.message(F.text.in_(["👥 Referrals", "👥 রেফারেল"]))
 async def btn_referrals(message: types.Message):
-    lang = user_langs.get(message.from_user.id, "en")
-    msg = "Invite friends and earn coins!\nYour link: https://t.me/YourBotLink" if lang == "en" else "বন্ধুদের ইনভাইট করে কয়েন আর্ন করুন!\nআপনার লিংক: https://t.me/YourBotLink"
-    await message.answer(msg)
+    await message.answer("Invite friends and earn coins!")
 
 @dp.message(F.text.in_(["⚙️ Settings", "⚙️ সেটিংস"]))
 async def btn_settings(message: types.Message):
-    lang = user_langs.get(message.from_user.id, "en")
-    msg = "⚙️ **Settings**\n\nUse `/lang` command to switch language." if lang == "en" else "⚙️ **সেটিংস**\n\nভাষা পরিবর্তন করতে `/lang` কমান্ডটি ব্যবহার করুন।"
-    await message.answer(msg, parse_mode="Markdown")
+    await message.answer("⚙️ Settings\nUse /lang to change language.")
 
 @dp.message(F.text.in_(["💬 Help", "💬 সাহায্য"]))
 async def btn_help(message: types.Message):
-    lang = user_langs.get(message.from_user.id, "en")
-    msg = "💬 **Help & Support**\n\nNeed assistance? Contact us: @YourSupportUsername" if lang == "en" else "💬 **সাহায্য ও সাপোর্ট**\n\nসমস্যা হলে যোগাযোগ করুন: @YourSupportUsername"
-    await message.answer(msg, parse_mode="Markdown")
+    await message.answer("💬 Help & Support\nContact: @YourSupportUsername")
 
 # রেন্ডারের জন্য সার্ভার
 async def handle(request):
