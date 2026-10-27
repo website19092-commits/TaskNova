@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SM. TaskNova</title>
+    
+    <!-- Telegram Web App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Premium FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        
+        body {
+            background: #121212;
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .user-info h2 { font-size: 18px; font-weight: 600; }
+        .user-info p { font-size: 12px; color: #888; }
+        
+        .avatar { 
+            width: 45px; height: 45px; border-radius: 50%; 
+            background: #0088cc; display: flex; justify-content: center; 
+            align-items: center; font-weight: bold; font-size: 20px; 
+            background-size: cover; background-position: center;
+            border: 2px solid #005f8f;
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, #0088cc, #005f8f);
+            padding: 25px; border-radius: 20px; text-align: center;
+            box-shadow: 0 10px 20px rgba(0, 136, 204, 0.2); margin-bottom: 25px;
+        }
+        .balance-card h3 { font-size: 14px; font-weight: 400; opacity: 0.9; margin-bottom: 5px; }
+        .balance-card h1 { font-size: 36px; font-weight: 700; margin-bottom: 15px; }
+        .withdraw-btn {
+            background: #ffffff; color: #0088cc; border: none; padding: 10px 25px;
+            border-radius: 25px; font-weight: 600; font-size: 14px; cursor: pointer;
+        }
+
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .action-card {
+            background: #1e1e24; border: 1px solid #333;
+            padding: 20px 15px; border-radius: 15px; text-align: center;
+            cursor: pointer; transition: 0.2s;
+        }
+        .action-card:active { background: #2a2a35; transform: scale(0.97); }
+        .action-card i { font-size: 28px; color: #0088cc; margin-bottom: 12px; display: block; }
+        .action-card h4 { font-size: 14px; font-weight: 600; }
+        .action-card p { font-size: 11px; color: #aaa; margin-top: 5px; }
+
+        .premium-banner {
+            background: linear-gradient(135deg, #f39c12, #d35400);
+            padding: 15px 20px; border-radius: 15px; display: flex;
+            justify-content: space-between; align-items: center;
+        }
+        .premium-banner i.fa-crown { font-size: 24px; margin-right: 10px; }
+        .premium-banner h4 { font-size: 14px; display: flex; align-items: center; }
+        .premium-banner button {
+            background: #fff; color: #d35400; border: none; padding: 8px 15px;
+            border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer;
+        }
+
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: #1a1a1a; display: flex; justify-content: space-around; 
+            padding: 15px 0; border-top: 1px solid #333;
+        }
+        .nav-item { text-align: center; color: #888; font-size: 11px; cursor: pointer; }
+        .nav-item.active { color: #0088cc; }
+        .nav-item i { font-size: 20px; display: block; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="user-info">
+            <h2 id="userName">Loading...</h2>
+            <p>ID: <span id="userId">...</span></p>
+        </div>
+        <div class="avatar" id="userAvatar">U</div>
+    </div>
+
+    <div class="balance-card">
+        <h3>Total Balance</h3>
+        <h1 id="userBalance">$0.00</h1>
+        <button class="withdraw-btn" onclick="requestWithdraw()">Withdraw Now</button>
+    </div>
+
+    <div class="grid-container">
+        <div class="action-card" onclick="openTask('gmail')">
+            <i class="fa-solid fa-envelope"></i>
+            <h4>Gmail Farm</h4>
+            <p>Earn $0.20/task</p>
+        </div>
+        <div class="action-card" onclick="openTask('cpa')">
+            <i class="fa-solid fa-bullseye"></i>
+            <h4>Micro Tasks</h4>
+            <p>Surveys & Offers</p>
+        </div>
+        <div class="action-card" onclick="openTask('daily')">
+            <i class="fa-solid fa-gift"></i>
+            <h4>Daily Bonus</h4>
+            <p>Claim free coins</p>
+        </div>
+        <div class="action-card" onclick="openTask('ref')">
+            <i class="fa-solid fa-users"></i>
+            <h4>Referrals</h4>
+            <p>Invite & Earn</p>
+        </div>
+    </div>
+
+    <div class="premium-banner">
+        <div>
+            <h4><i class="fa-solid fa-crown"></i> Go Premium</h4>
+            <p style="font-size: 11px; opacity: 0.8; margin-left: 34px;">Unlimited tasks!</p>
+        </div>
+        <button onclick="buyPremium()">Upgrade</button>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active"><i class="fa-solid fa-house"></i>Home</div>
+        <div class="nav-item"><i class="fa-solid fa-list-check"></i>Tasks</div>
+        <div class="nav-item"><i class="fa-solid fa-wallet"></i>Wallet</div>
+        <div class="nav-item"><i class="fa-solid fa-user"></i>Profile</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); 
+
+        const user = tg.initDataUnsafe?.user;
+        
+        if (user) {
+            // ইউজারের নাম বসানো
+            document.getElementById('userName').innerText = user.first_name + (user.last_name ? " " + user.last_name : "");
+            document.getElementById('userId').innerText = user.id;
+
+            // র‍্যান্ডম অ্যাভাটার জেনারেট করা (DiceBear API)
+            const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`;
+            document.getElementById('userAvatar').style.backgroundImage = `url(${avatarUrl})`;
+            document.getElementById('userAvatar').innerText = ""; // 'U' মুছে ফেলবে
+        } else {
+            document.getElementById('userName').innerText = "Guest User";
+        }
+
+        function openTask(type) { tg.showAlert("Opening " + type + " tasks... (Coming Soon)"); }
+        function requestWithdraw() { tg.showAlert("Minimum withdraw is $1.00."); }
+        function buyPremium() { tg.showAlert("Premium payment will open here."); }
+    </script>
+</body>
+</html>
