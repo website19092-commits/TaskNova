@@ -6,8 +6,8 @@ from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 from aiohttp import web
 
-# আপনার টোকেন ও লিংক
-BOT_TOKEN = "8715331593:AAEX0JUAYn1P4Zpuy5s3jw58gqYua8Wz1zc"
+# আপনার নতুন টোকেন এখানে বসানো হয়েছে
+BOT_TOKEN = "8715331593:AAGGhE0Ghj-5fX7B691WWxGLojWPsgbW6T8"
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 PORT = int(os.environ.get("PORT", 8080))
 
