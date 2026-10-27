@@ -9,7 +9,7 @@ from aiohttp import web
 # ==========================================
 BOT_TOKEN = "8715331593:AAGGhE0Ghj-5fX7B691WWxGLojWPsgbW6T8"
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
-ADMIN_ID = "8021210361"  # আপনার টেলিগ্রাম আইডি
+ADMIN_ID = "8021210361"
 PORT = int(os.environ.get("PORT", 8080))
 # ==========================================
 
@@ -63,16 +63,11 @@ async def cmd_lang(message: types.Message):
     msg = "Language changed to **English**." if new_lang == "en" else "ভাষা **বাংলা**-তে পরিবর্তন করা হয়েছে।"
     await message.answer(msg, reply_markup=get_main_keyboard(new_lang), parse_mode="Markdown")
 
-# ==========================================
-# 🚀 অ্যাডমিন প্যানেল (Admin Panel)
-# ==========================================
 @dp.message(Command("admin"))
 async def cmd_admin(message: types.Message):
-    # চেক করা হচ্ছে সে অ্যাডমিন কি না
     if str(message.from_user.id) != ADMIN_ID:
         await message.answer("⛔ দুঃখিত, আপনি এই কমান্ড ব্যবহার করার অনুমতি রাখেন না।")
         return
-    
     admin_kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="👤 Total Users"), KeyboardButton(text="📧 Add Gmail Data")],
@@ -102,9 +97,6 @@ async def admin_back(message: types.Message):
     lang = user_langs.get(message.from_user.id, "en")
     await message.answer("মেইন মেনুতে ফিরে আসা হলো।", reply_markup=get_main_keyboard(lang))
 
-# ==========================================
-# সাধারণ বাটনগুলোর অ্যাকশন
-# ==========================================
 @dp.message(F.text.in_(["➕ Register Gmail", "➕ জিমেইল রেজিস্টার"]))
 async def btn_gmail(message: types.Message):
     await message.answer("📧 Gmail registration system is coming soon!")
@@ -129,7 +121,6 @@ async def btn_settings(message: types.Message):
 async def btn_help(message: types.Message):
     await message.answer("💬 Help & Support\nContact: @YourSupportUsername")
 
-# রেন্ডারের জন্য সার্ভার
 async def handle(request):
     return web.Response(text="Bot is running!")
 
