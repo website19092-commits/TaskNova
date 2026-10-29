@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SM. TaskNova - Earn</title>
     
+    <!-- Telegram Web App -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Monetag SDK -->
     <script src='//libtl.com/sdk.js' data-zone='12143232' data-sdk='show_12143232'></script>
 
     <style>
@@ -14,13 +18,11 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background: #121212; color: #ffffff; min-height: 100vh; padding: 20px; padding-bottom: 80px; }
         
-        /* হেডার */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .user-info h2 { font-size: 18px; font-weight: 600; }
         .user-info p { font-size: 12px; color: #888; }
         .avatar { width: 45px; height: 45px; border-radius: 50%; background: #0088cc; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 20px; background-size: cover; border: 2px solid #005f8f; }
 
-        /* কার্ড স্টাইল */
         .balance-card { background: linear-gradient(135deg, #0088cc, #005f8f); padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0, 136, 204, 0.2); margin-bottom: 20px; }
         .balance-card h3 { font-size: 14px; font-weight: 400; opacity: 0.9; margin-bottom: 5px; }
         .balance-card h1 { font-size: 36px; font-weight: 700; margin-bottom: 15px; }
@@ -29,7 +31,6 @@
         .hold-card h4 { color: #aaa; font-size: 14px; }
         .hold-card h2 { color: #f39c12; font-size: 24px; margin-top: 5px; }
 
-        /* গ্রিড */
         .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
         .action-card { background: #1e1e24; border: 1px solid #333; padding: 20px 15px; border-radius: 15px; text-align: center; cursor: pointer; transition: 0.2s; }
         .action-card:active { background: #2a2a35; transform: scale(0.97); }
@@ -37,24 +38,20 @@
         .action-card h4 { font-size: 14px; font-weight: 600; }
         .action-card p { font-size: 11px; color: #aaa; margin-top: 5px; }
 
-        /* প্রিমিয়াম */
         .premium-banner { background: linear-gradient(135deg, #f39c12, #d35400); padding: 15px 20px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;}
         .premium-banner i.fa-crown { font-size: 24px; margin-right: 10px; }
         .premium-banner h4 { font-size: 14px; display: flex; align-items: center; }
         .premium-banner button { background: #fff; color: #d35400; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer; }
 
-        /* বটম নেভিগেশন */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #1a1a1a; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #333; z-index: 1000;}
         .nav-item { text-align: center; color: #888; font-size: 11px; cursor: pointer; }
         .nav-item.active { color: #0088cc; }
         .nav-item i { font-size: 20px; display: block; margin-bottom: 5px; }
 
-        /* পেজ কন্ট্রোল (লুকানো/দেখানো) */
         .page-section { display: none; }
         .page-section.active { display: block; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* অ্যাড লোডিং */
         #adOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; flex-direction:column; z-index:9999; }
         .loader { border: 5px solid #333; border-top: 5px solid #0088cc; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -71,7 +68,7 @@
         <div class="avatar" id="userAvatar">U</div>
     </div>
 
-    <!-- ================= হোম পেজ (Home Section) ================= -->
+    <!-- ================= হোম পেজ ================= -->
     <div id="homePage" class="page-section active">
         <div class="balance-card">
             <h3>Total Balance</h3>
@@ -115,7 +112,7 @@
         </div>
     </div>
 
-    <!-- ================= টাস্ক পেজ (Tasks Section) ================= -->
+    <!-- ================= টাস্ক পেজ ================= -->
     <div id="tasksPage" class="page-section">
         <h2 style="margin-bottom: 15px;">📋 Tasks</h2>
         <div class="hold-card" style="margin-bottom:10px; text-align:left; padding: 20px;">
@@ -128,18 +125,18 @@
         </div>
     </div>
 
-    <!-- ================= ওয়ালেট পেজ (Wallet Section) ================= -->
+    <!-- ================= ওয়ালেট পেজ ================= -->
     <div id="walletPage" class="page-section">
         <h2 style="margin-bottom: 15px;">💳 Wallet</h2>
         <div class="balance-card">
             <h3>Total Balance</h3>
             <h1 id="walletBalance">$0.00</h1>
-            <button class="premium-banner button" style="background:#fff; color:#0088cc; margin-top:15px; width:100%; border-radius:10px; padding:10px;" onclick="showAlert('Minimum withdraw is $1.00')">Withdraw</button>
+            <button style="background:#fff; color:#0088cc; margin-top:15px; width:100%; border-radius:10px; padding:10px; font-weight:bold; border:none;" onclick="showAlert('Minimum withdraw is $1.00')">Withdraw</button>
         </div>
         <p style="text-align:center; color:#888; font-size:12px; margin-top:20px;">Transactions will appear here.</p>
     </div>
 
-    <!-- ================= প্রোফাইল পেজ (Profile Section) ================= -->
+    <!-- ================= প্রোফাইল পেজ ================= -->
     <div id="profilePage" class="page-section">
         <h2 style="margin-bottom: 15px;">👤 Profile</h2>
         <div style="text-align: center; margin-bottom: 20px;">
@@ -176,22 +173,34 @@
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand(); 
+        tg.ready(); // টেলিগ্রামকে সিগন্যাল দেওয়া যাতে ডেটা লোড হয়
 
-        // আপনার নতুন Render API লিংক
+        // আপনার Render API লিংক
         const API_URL = "https://tasknova-6mjt.onrender.com"; 
-        const user = tg.initDataUnsafe?.user;
 
-        // ইউজার ডেটা সেট করা
+        // 🚀 গেস্ট ইউজার সমস্যার ১০০% পাকা সমাধান 🚀
+        let user = tg.initDataUnsafe?.user;
+
+        // যদি ডেটা না আসে, তবে টেলিগ্রামের ভেতরের র-ডেটা থেকে জোর করে বের করব
+        if (!user && tg.initData) {
+            try {
+                const urlParams = new URLSearchParams(tg.initData);
+                const userStr = urlParams.get('user');
+                if (userStr) {
+                    user = JSON.parse(userStr);
+                }
+            } catch (e) {
+                console.log("User parse error", e);
+            }
+        }
+
         if (user) {
-            // হোম হেডার
             document.getElementById('userName').innerText = user.first_name + (user.last_name ? " " + user.last_name : "");
             document.getElementById('userId').innerText = user.id;
             
-            // প্রোফাইল পেজ
             document.getElementById('profileName').innerText = user.first_name + (user.last_name ? " " + user.last_name : "");
             document.getElementById('profileId').innerText = user.id;
 
-            // অ্যাভাটার
             const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`;
             document.getElementById('userAvatar').style.backgroundImage = `url(${avatarUrl})`;
             document.getElementById('userAvatar').innerText = ""; 
@@ -201,23 +210,19 @@
             fetchUserData(user.id);
             setInterval(() => fetchUserData(user.id), 10000); 
         } else {
+            // যদি সত্যিই টেলিগ্রামের বাইরে থেকে কেউ ওপেন করে
             document.getElementById('userName').innerText = "Guest User";
         }
 
-        // পেজ সুইচ করার ফাংশন (নিচের বাটনগুলোর জন্য)
+        // পেজ সুইচ করার ফাংশন
         function switchPage(pageId, element) {
-            // সব পেজ লুকানো
             document.querySelectorAll('.page-section').forEach(page => {
                 page.classList.remove('active');
             });
-            // সব বাটন আন-অ্যাক্টিভ করা
             document.querySelectorAll('.nav-item').forEach(nav => {
                 nav.classList.remove('active');
             });
-            
-            // ক্লিক করা পেজ দেখানো
             document.getElementById(pageId).classList.add('active');
-            // ক্লিক করা বাটন অ্যাক্টিভ করা
             element.classList.add('active');
         }
 
@@ -235,7 +240,7 @@
                         document.getElementById('premiumBanner').style.display = 'none';
                     }
                 }
-            } catch (error) { console.log("Error:", error); }
+            } catch (error) { console.log("Error fetching data:", error); }
         }
 
         // Monetag অ্যাড কল করা
@@ -245,8 +250,8 @@
 
             show_12143232().then(() => {
                 overlay.style.display = 'none';
-                tg.showAlert("🎉 Ad watched successfully! $0.01 added.");
-                addReward(user.id, 0.01); 
+                tg.showAlert("🎉 Ad watched successfully! $0.01 added to Hold.");
+                if(user) addReward(user.id, 0.01); 
             }).catch((error) => {
                 overlay.style.display = 'none';
                 tg.showAlert("❌ Ad was skipped or failed to load.");
@@ -265,7 +270,7 @@
             } catch (error) { console.log("Reward Error:", error); }
         }
 
-        // প্রিমিয়াম পেমেন্ট (Telegram Stars)
+        // প্রিমিয়াম পেমেন্ট
         async function buyPremium() {
             tg.showPopup({
                 title: 'Premium Membership',
@@ -282,7 +287,6 @@
             });
         }
 
-        // সাধারণ অ্যালার্ট
         function showAlert(msg) { tg.showAlert(msg); }
     </script>
 </body>
