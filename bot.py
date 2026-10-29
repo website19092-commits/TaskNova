@@ -1,3 +1,4 @@
+
 import asyncio
 import logging
 import os
@@ -17,62 +18,54 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# ইউজারদের ভাষা মনে রাখার জন্য ডিকশনারি (ডিফল্ট বাংলা)
+# ইউজারদের ভাষা মনে রাখার জন্য (ডিফল্ট: en)
 user_langs = {}
+# অ্যাডমিনের কাজের স্টেট (ব্রডকাস্ট ইত্যাদির জন্য)
+admin_states = {}
 
-# ================= ভাষা ও ফ্যান্সি টেক্সট (Translations) =================
+# ================= দ্বিভাষিক মেসেজ (Bilingual Texts) =================
 TEXTS = {
-    "welcome": {
-        "bn": "👑 স্বাগতম **{name}**!\n\n🌟 **𝗦𝗠. 𝗧𝗮𝘀𝗸𝗡𝗼𝘃𝗮**-তে আপনাকে স্বাগতম।\n\n👇 অ্যাপটি ওপেন করতে নিচের **☰ মেনু বাটনে** ক্লিক করুন।",
-        "en": "👑 Welcome **{name}**!\n\n🌟 Welcome to **𝗦𝗠. 𝗧𝗮𝘀𝗸𝗡𝗼𝘃𝗮**.\n\n👇 Click the **☰ Menu Button** below to open the App."
-    },
-    "btn_balance": {"bn": "💰 ব্যালেন্স", "en": "💰 𝗕𝗮𝗹𝗮𝗻𝗰𝗲"},
-    "btn_refer": {"bn": "👥 রেফারেল", "en": "👥 𝗥𝗲𝗳𝗲𝗿𝗿𝗮𝗹𝘀"},
-    "btn_help": {"bn": "💬 সাহায্য", "en": "💬 𝗛𝗲𝗹𝗽"},
-    "btn_admin": {"bn": "👑 অ্যাডমিন", "en": "👑 𝗔𝗱𝗺𝗶𝗻"},
+    "welcome": "👑 **Welcome {name}**!\n👑 **স্বাগতম {name}**!\n\n🌟 Welcome to **𝗦𝗠. 𝗧𝗮𝘀𝗸𝗡𝗼𝘃𝗮**.\n🌟 **𝗦𝗠. 𝗧𝗮𝘀𝗸𝗡𝗼𝘃𝗮**-তে আপনাকে স্বাগতম।\n\n👇 Click the Menu Button to open App.\n👇 অ্যাপটি ওপেন করতে নিচের মেনু বাটনে ক্লিক করুন।",
     
-    "balance_msg": {
-        "bn": "💰 **আপনার ব্যালেন্স:** ${balance}\n⏳ **হোল্ড ব্যালেন্স:** ${hold}\n\n(অ্যাপে গিয়ে আসল ব্যালেন্স দেখুন)",
-        "en": "💰 **𝗬𝗼𝘂𝗿 𝗕𝗮𝗹𝗮𝗻𝗰𝗲:** ${balance}\n⏳ **𝗛𝗼𝗹𝗱 𝗕𝗮𝗹𝗮𝗻𝗰𝗲:** ${hold}\n\n(Open App to see real balance)"
-    },
-    "refer_msg": {
-        "bn": "👥 **আপনার রেফারেল লিংক:**\n`{link}`\n\nবন্ধুদের পাঠান, তারা জয়েন করলে আপনি কয়েন পাবেন!",
-        "en": "👥 **𝗬𝗼𝘂𝗿 𝗥𝗲𝗳𝗲𝗿𝗿𝗮𝗹 𝗟𝗶𝗻𝗸:**\n`{link}`\n\nShare with friends and earn coins!"
-    },
-    "help_msg": {
-        "bn": "💬 **সাহায্য ও সাপোর্ট**\n\nযেকোনো সমস্যায় আমাদের সাথে যোগাযোগ করুন:",
-        "en": "💬 **𝗛𝗲𝗹𝗽 & 𝗦𝘂𝗽𝗽𝗼𝗿𝘁**\n\nContact us for any issue:"
-    },
-    "admin_panel": {
-        "bn": "👑 **অ্যাডমিন প্যানেল**\n\nএখান থেকে সব কন্ট্রোল করুন:",
-        "en": "👑 **𝗔𝗱𝗺𝗶𝗻 𝗣𝗮𝗻𝗲𝗹**\n\nControl everything here:"
-    },
-    "lang_changed": {
-        "bn": "✅ ভাষা সফলভাবে **বাংলা** করা হয়েছে।",
-        "en": "✅ Language successfully changed to **English**."
-    }
+    "balance": "💰 **Balance:** ${balance}\n💰 **ব্যালেন্স:** ${balance}\n\n⏳ **Hold Balance:** ${hold}\n⏳ **হোল্ড ব্যালেন্স:** ${hold}\n\n(Open App to see real balance / আসল ব্যালেন্স দেখতে অ্যাপে যান)",
+    
+    "refer": "👥 **Your Referral Link:**\n`{link}`\n\nShare with friends and earn.\nবন্ধুদের সাথে শেয়ার করুন এবং আয় করুন।",
+    
+    "help": "💬 **Help & Support**\n💬 **সাহায্য ও সাপোর্ট**\n\nContact us for any issue:\nযেকোনো সমস্যায় আমাদের সাথে যোগাযোগ করুন:",
+    
+    "settings": "⚙️ **Settings**\n⚙️ **সেটিংস**\n\nChange language using the /lang command.\nভাষা পরিবর্তন করতে /lang কমান্ডটি ব্যবহার করুন।",
+    
+    "lang_changed": "✅ Language changed to **English**.\n✅ ভাষা **ইংরেজি**-তে পরিবর্তন করা হয়েছে।",
+    
+    # Admin Texts
+    "admin_panel": "👑 **Premium Admin Panel**\n👑 **প্রিমিয়াম অ্যাডমিন প্যানেল**\n\nControl everything below:\nনিচ থেকে সবকিছু কন্ট্রোল করুন:",
+    "admin_broadcast_prompt": "📢 Send the message you want to broadcast to all users:\n📢 যে মেসেজটি সব ইউজারকে পাঠাতে চান, সেটি লিখুন:",
+    "admin_broadcast_done": "✅ Broadcast sent to {count} users.\n✅ {count} জন ইউজারকে মেসেজ পাঠানো হয়েছে।",
+    "admin_total_users": "👤 **Total Registered Users:** {count}\n👤 **মোট রেজিস্টার্ড ইউজার:** {count}"
 }
 
-def get_text(key, lang="bn"):
-    return TEXTS.get(key, {}).get(lang, "Error")
+def get_text(key, **kwargs):
+    text = TEXTS.get(key, "Message not found.")
+    for k, v in kwargs.items():
+        text = text.replace(f"{{{k}}}", str(v))
+    return text
 
-# ================= কীবোর্ড ডিজাইন =================
-def get_main_keyboard(lang="bn"):
+# ================= কীবোর্ড ডিজাইন (সবসময় ইংরেজি) =================
+def get_main_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text=get_text("btn_balance", lang)), KeyboardButton(text=get_text("btn_refer", lang))],
-            [KeyboardButton(text=get_text("btn_help", lang))]
+            [KeyboardButton(text="💰 Balance"), KeyboardButton(text="👥 Referrals")],
+            [KeyboardButton(text="⚙️ Settings"), KeyboardButton(text="💬 Help")]
         ],
         resize_keyboard=True,
         is_persistent=True
     )
 
-# অ্যাডমিনদের জন্য আলাদা কীবোর্ড
 def get_admin_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📢 Broadcast"), KeyboardButton(text="👤 Total Users")],
-            [KeyboardButton(text="⚙️ Main Menu")]
+            [KeyboardButton(text="📢 Broadcast Message"), KeyboardButton(text="👤 Total Users")],
+            [KeyboardButton(text="⚙️ Back to Main Menu")]
         ],
         resize_keyboard=True
     )
@@ -81,11 +74,12 @@ def get_admin_keyboard():
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     uid = str(message.from_user.id)
-    lang = user_langs.get(uid, "bn") # ডিফল্ট বাংলা
-    
+    if uid not in user_langs:
+        user_langs[uid] = "en" # ডিফল্ট ইংরেজি
+        
     await message.answer(
-        get_text("welcome", lang).format(name=message.from_user.first_name),
-        reply_markup=get_main_keyboard(lang),
+        get_text("welcome", name=message.from_user.first_name),
+        reply_markup=get_main_keyboard(),
         parse_mode="Markdown"
     )
 
@@ -93,56 +87,75 @@ async def cmd_start(message: types.Message):
 @dp.message(Command("lang"))
 async def cmd_lang(message: types.Message):
     uid = str(message.from_user.id)
-    current_lang = user_langs.get(uid, "bn")
-    new_lang = "en" if current_lang == "bn" else "bn"
-    user_langs[uid] = new_lang
-    
-    await message.answer(
-        get_text("lang_changed", new_lang),
-        reply_markup=get_main_keyboard(new_lang),
-        parse_mode="Markdown"
-    )
+    # মেসেজ দ্বিভাষিক হবে, তবে কনফার্মেশন দেখাবে
+    await message.answer(get_text("lang_changed"), parse_mode="Markdown")
 
 # ================= মেইন বাটন অ্যাকশন =================
-@dp.message(F.text.in_(["💰 ব্যালেন্স", "💰 𝗕𝗮𝗹𝗮𝗻𝗰𝗲"]))
+@dp.message(F.text == "💰 Balance")
 async def btn_balance(message: types.Message):
-    uid = str(message.from_user.id)
-    lang = user_langs.get(uid, "bn")
-    # আপাতত ডামি ডেটা, ডাটাবেস যুক্ত হলে আসল হবে
-    await message.answer(get_text("balance_msg", lang).format(balance="0.00", hold="0.00"), parse_mode="Markdown")
+    await message.answer(get_text("balance", balance="0.00", hold="0.00"), parse_mode="Markdown")
 
-@dp.message(F.text.in_(["👥 রেফারেল", "👥 𝗥𝗲𝗳𝗲𝗿𝗿𝗮𝗹𝘀"]))
+@dp.message(F.text == "👥 Referrals")
 async def btn_refer(message: types.Message):
-    uid = str(message.from_user.id)
-    lang = user_langs.get(uid, "bn")
     bot_info = await bot.get_me()
     ref_link = f"https://t.me/{bot_info.username}?start=ref_{message.from_user.id}"
-    await message.answer(get_text("refer_msg", lang).format(link=ref_link), parse_mode="Markdown")
+    await message.answer(get_text("refer", link=ref_link), parse_mode="Markdown")
 
-# ================= হেল্প ও সাপোর্ট =================
-@dp.message(F.text.in_(["💬 সাহায্য", "💬 𝗛𝗲𝗹𝗽"]))
+@dp.message(F.text == "⚙️ Settings")
+async def btn_settings(message: types.Message):
+    await message.answer(get_text("settings"), parse_mode="Markdown")
+
+@dp.message(F.text == "💬 Help")
 async def btn_help(message: types.Message):
-    uid = str(message.from_user.id)
-    lang = user_langs.get(uid, "bn")
-    
-    # প্রিমিয়াম সাপোর্ট বাটন
     inline_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📱 𝗧𝗲𝗹𝗲𝗴𝗿𝗮𝗺 𝗦𝘂𝗽𝗽𝗼𝗿𝘁", url="https://t.me/SM_Shakib_Hasan")],
-        [InlineKeyboardButton(text="📞 𝗪𝗵𝗮𝘁𝘀𝗔𝗽𝗽", url="https://wa.me/880179136670")]
+        [InlineKeyboardButton(text="📱 Telegram Support", url="https://t.me/SM_Shakib_Hasan")],
+        [InlineKeyboardButton(text="📞 WhatsApp", url="https://wa.me/880179136670")]
     ])
-    
-    await message.answer(get_text("help_msg", lang), reply_markup=inline_kb, parse_mode="Markdown")
+    await message.answer(get_text("help"), reply_markup=inline_kb, parse_mode="Markdown")
 
-# ================= অ্যাডমিন প্যানেল =================
+
+# ================= প্রিমিয়াম অ্যাডমিন প্যানেল =================
 @dp.message(Command("admin"))
 async def cmd_admin(message: types.Message):
     if str(message.from_user.id) != ADMIN_ID: return
-    await message.answer(get_text("admin_panel", "bn"), reply_markup=get_admin_keyboard(), parse_mode="Markdown")
+    admin_states[message.from_user.id] = None # রিসেট স্টেট
+    await message.answer(get_text("admin_panel"), reply_markup=get_admin_keyboard(), parse_mode="Markdown")
 
-@dp.message(F.text == "⚙️ Main Menu")
-async def back_to_main(message: types.Message):
+@dp.message(F.text == "⚙️ Back to Main Menu")
+async def admin_back(message: types.Message):
     if str(message.from_user.id) != ADMIN_ID: return
-    await message.answer("Main Menu", reply_markup=get_main_keyboard("bn"))
+    admin_states[message.from_user.id] = None
+    await message.answer("Returned to Main Menu.", reply_markup=get_main_keyboard())
+
+@dp.message(F.text == "👤 Total Users")
+async def admin_total_users(message: types.Message):
+    if str(message.from_user.id) != ADMIN_ID: return
+    # আপাতত ডেমো কাউন্ট, ডাটাবেস যুক্ত হলে আসল হবে
+    await message.answer(get_text("admin_total_users", count=1), parse_mode="Markdown")
+
+@dp.message(F.text == "📢 Broadcast Message")
+async def admin_broadcast_prompt(message: types.Message):
+    if str(message.from_user.id) != ADMIN_ID: return
+    admin_states[message.from_user.id] = "broadcasting"
+    await message.answer(get_text("admin_broadcast_prompt"), reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="Cancel")]], resize_keyboard=True))
+
+# ================= অ্যাডমিন স্টেট হ্যান্ডলার (ব্রডকাস্ট) =================
+@dp.message(F.text == "Cancel")
+async def cancel_admin(message: types.Message):
+    if str(message.from_user.id) != ADMIN_ID: return
+    admin_states[message.from_user.id] = None
+    await message.answer("Cancelled.", reply_markup=get_admin_keyboard())
+
+@dp.message()
+async def handle_admin_input(message: types.Message):
+    if str(message.from_user.id) != ADMIN_ID: return
+    
+    state = admin_states.get(message.from_user.id)
+    if state == "broadcasting":
+        # এখানে ডাটাবেস থেকে ইউজার এনে পাঠাতে হবে, আপাতত ডেমো
+        await message.answer(get_text("admin_broadcast_done", count=1), reply_markup=get_admin_keyboard(), parse_mode="Markdown")
+        admin_states[message.from_user.id] = None
+
 
 # ================= API সার্ভার (UptimeRobot-এর জন্য) =================
 async def handle_ping(request):
