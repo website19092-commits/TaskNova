@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 import os
@@ -9,7 +8,7 @@ from aiohttp import web
 
 # ==========================================
 BOT_TOKEN = "8715331593:AAGGhE0Ghj-5fX7B691WWxGLojWPsgbW6T8"
-WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
+WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/?v=1"
 ADMIN_ID = "8021210361"
 PORT = int(os.environ.get("PORT", 8080))
 # ==========================================
