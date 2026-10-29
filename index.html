@@ -3,81 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SM. TaskNova</title>
+    <title>SM. TaskNova - Earn</title>
     
-    <!-- Telegram Web App Script -->
+    <!-- Telegram Web App -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Premium FontAwesome Icons -->
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Monetag SDK (আপনার দেওয়া লিংক) -->
+    <script src='//libtl.com/sdk.js' data-zone='12143232' data-sdk='show_12143232'></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background: #121212; color: #ffffff; min-height: 100vh; padding: 20px; padding-bottom: 80px; }
         
-        body {
-            background: #121212;
-            color: #ffffff;
-            min-height: 100vh;
-            padding: 20px;
-            padding-bottom: 80px;
-        }
-
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .user-info h2 { font-size: 18px; font-weight: 600; }
         .user-info p { font-size: 12px; color: #888; }
-        
-        .avatar { 
-            width: 45px; height: 45px; border-radius: 50%; 
-            background: #0088cc; display: flex; justify-content: center; 
-            align-items: center; font-weight: bold; font-size: 20px; 
-            background-size: cover; background-position: center;
-            border: 2px solid #005f8f;
-        }
+        .avatar { width: 45px; height: 45px; border-radius: 50%; background: #0088cc; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 20px; background-size: cover; border: 2px solid #005f8f; }
 
-        .balance-card {
-            background: linear-gradient(135deg, #0088cc, #005f8f);
-            padding: 25px; border-radius: 20px; text-align: center;
-            box-shadow: 0 10px 20px rgba(0, 136, 204, 0.2); margin-bottom: 25px;
-        }
+        .balance-card { background: linear-gradient(135deg, #0088cc, #005f8f); padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0, 136, 204, 0.2); margin-bottom: 20px; }
         .balance-card h3 { font-size: 14px; font-weight: 400; opacity: 0.9; margin-bottom: 5px; }
         .balance-card h1 { font-size: 36px; font-weight: 700; margin-bottom: 15px; }
-        .withdraw-btn {
-            background: #ffffff; color: #0088cc; border: none; padding: 10px 25px;
-            border-radius: 25px; font-weight: 600; font-size: 14px; cursor: pointer;
-        }
+        
+        .hold-card { background: #1e1e24; border: 1px solid #333; padding: 15px; border-radius: 15px; margin-bottom: 25px; text-align: center; }
+        .hold-card h4 { color: #aaa; font-size: 14px; }
+        .hold-card h2 { color: #f39c12; font-size: 24px; margin-top: 5px; }
 
         .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-        .action-card {
-            background: #1e1e24; border: 1px solid #333;
-            padding: 20px 15px; border-radius: 15px; text-align: center;
-            cursor: pointer; transition: 0.2s;
-        }
+        .action-card { background: #1e1e24; border: 1px solid #333; padding: 20px 15px; border-radius: 15px; text-align: center; cursor: pointer; transition: 0.2s; }
         .action-card:active { background: #2a2a35; transform: scale(0.97); }
         .action-card i { font-size: 28px; color: #0088cc; margin-bottom: 12px; display: block; }
         .action-card h4 { font-size: 14px; font-weight: 600; }
         .action-card p { font-size: 11px; color: #aaa; margin-top: 5px; }
 
-        .premium-banner {
-            background: linear-gradient(135deg, #f39c12, #d35400);
-            padding: 15px 20px; border-radius: 15px; display: flex;
-            justify-content: space-between; align-items: center;
-        }
+        .premium-banner { background: linear-gradient(135deg, #f39c12, #d35400); padding: 15px 20px; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; }
         .premium-banner i.fa-crown { font-size: 24px; margin-right: 10px; }
         .premium-banner h4 { font-size: 14px; display: flex; align-items: center; }
-        .premium-banner button {
-            background: #fff; color: #d35400; border: none; padding: 8px 15px;
-            border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer;
-        }
+        .premium-banner button { background: #fff; color: #d35400; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer; }
 
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background: #1a1a1a; display: flex; justify-content: space-around; 
-            padding: 15px 0; border-top: 1px solid #333;
-        }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #1a1a1a; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #333; }
         .nav-item { text-align: center; color: #888; font-size: 11px; cursor: pointer; }
         .nav-item.active { color: #0088cc; }
         .nav-item i { font-size: 20px; display: block; margin-bottom: 5px; }
+        
+        /* অ্যাড লোডিং ওভারলে */
+        #adOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:none; justify-content:center; align-items:center; flex-direction:column; z-index:9999; }
+        .loader { border: 5px solid #333; border-top: 5px solid #0088cc; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -93,19 +67,23 @@
     <div class="balance-card">
         <h3>Total Balance</h3>
         <h1 id="userBalance">$0.00</h1>
-        <button class="withdraw-btn" onclick="requestWithdraw()">Withdraw Now</button>
+    </div>
+
+    <div class="hold-card">
+        <h4>⏳ Pending / Hold Balance</h4>
+        <h2 id="holdBalance">$0.00</h2>
     </div>
 
     <div class="grid-container">
-        <div class="action-card" onclick="openTask('gmail')">
-            <i class="fa-solid fa-envelope"></i>
-            <h4>Gmail Farm</h4>
-            <p>Earn $0.20/task</p>
+        <div class="action-card" onclick="watchAd()">
+            <i class="fa-solid fa-play"></i>
+            <h4>Watch & Earn</h4>
+            <p>Get $0.01 per ad</p>
         </div>
         <div class="action-card" onclick="openTask('cpa')">
             <i class="fa-solid fa-bullseye"></i>
             <h4>Micro Tasks</h4>
-            <p>Surveys & Offers</p>
+            <p>Coming Soon</p>
         </div>
         <div class="action-card" onclick="openTask('daily')">
             <i class="fa-solid fa-gift"></i>
@@ -134,27 +112,77 @@
         <div class="nav-item"><i class="fa-solid fa-user"></i>Profile</div>
     </div>
 
+    <!-- অ্যাড লোডিং স্ক্রিন -->
+    <div id="adOverlay">
+        <div class="loader"></div>
+        <h3 style="color: #fff;">Loading Ad...</h3>
+        <p style="color: #aaa; font-size: 12px;">Please wait a moment</p>
+    </div>
+
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand(); 
 
         const user = tg.initDataUnsafe?.user;
-        
+        // আপনার Render API লিংক (পরে বসাবেন)
+        const API_URL = "https://your-render-app.onrender.com"; 
+
         if (user) {
-            // ইউজারের নাম বসানো
             document.getElementById('userName').innerText = user.first_name + (user.last_name ? " " + user.last_name : "");
             document.getElementById('userId').innerText = user.id;
-
-            // র‍্যান্ডম অ্যাভাটার জেনারেট করা (DiceBear API)
             const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`;
             document.getElementById('userAvatar').style.backgroundImage = `url(${avatarUrl})`;
-            document.getElementById('userAvatar').innerText = ""; // 'U' মুছে ফেলবে
+            document.getElementById('userAvatar').innerText = ""; 
+
+            fetchUserData(user.id);
+            setInterval(() => fetchUserData(user.id), 10000); // প্রতি ১০ সেকেন্ডে আপডেট
         } else {
             document.getElementById('userName').innerText = "Guest User";
         }
 
-        function openTask(type) { tg.showAlert("Opening " + type + " tasks... (Coming Soon)"); }
-        function requestWithdraw() { tg.showAlert("Minimum withdraw is $1.00."); }
+        // ডেটাবেস থেকে ডেটা আনা
+        async function fetchUserData(userId) {
+            try {
+                const response = await fetch(`${API_URL}/api/user?userId=${userId}`);
+                const data = await response.json();
+                if (data) {
+                    document.getElementById('userBalance').innerText = `$${(data.balance || 0).toFixed(2)}`;
+                    document.getElementById('holdBalance').innerText = `$${(data.hold_balance || 0).toFixed(2)}`;
+                }
+            } catch (error) { console.log("Error:", error); }
+        }
+
+        // Monetag অ্যাড কল করা
+        function watchAd() {
+            const overlay = document.getElementById('adOverlay');
+            overlay.style.display = 'flex'; // লোডিং দেখানো
+
+            // Monetag SDK Function
+            show_12143232().then(() => {
+                // অ্যাড সফলভাবে দেখা হলে
+                overlay.style.display = 'none';
+                tg.showAlert("🎉 Ad watched successfully! $0.01 added to your Hold Balance.");
+                addReward(user.id, 0.01); // সার্ভারে রিওয়ার্ড পাঠানো
+            }).catch((error) => {
+                // অ্যাড বন্ধ করলে বা এরর হলে
+                overlay.style.display = 'none';
+                tg.showAlert("❌ Ad was skipped or failed to load. Please try again.");
+            });
+        }
+
+        // সার্ভারে রিওয়ার্ড পাঠানো
+        async function addReward(userId, amount) {
+            try {
+                await fetch(`${API_URL}/api/reward`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: userId, amount: amount })
+                });
+                fetchUserData(userId); // সাথে সাথে ব্যালেন্স আপডেট
+            } catch (error) { console.log("Reward Error:", error); }
+        }
+
+        function openTask(type) { tg.showAlert("Coming soon!"); }
         function buyPremium() { tg.showAlert("Premium payment will open here."); }
     </script>
 </body>
