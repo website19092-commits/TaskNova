@@ -1,3 +1,4 @@
+
 import asyncio
 import logging
 import os
@@ -6,11 +7,12 @@ from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 from aiohttp import web
 
-# আপনার টোকেন ও লিংক
+# ==========================================
 BOT_TOKEN = "8715331593:AAGGhE0Ghj-5fX7B691WWxGLojWPsgbW6T8"
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 ADMIN_ID = "8021210361"
-PORT = int(os.environ.get("PORT", 7860))
+PORT = int(os.environ.get("PORT", 8080))
+# ==========================================
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
@@ -54,17 +56,14 @@ async def btn_settings(message: types.Message):
 async def btn_help(message: types.Message):
     await message.answer("💬 Contact Support: @SM_Shakib_Hasan")
 
-# API সার্ভার (HTML থেকে ডেটা নেওয়ার জন্য)
-async def handle_get_user(request):
-    return web.json_response({"balance": 0, "hold_balance": 0})
-
-async def handle_add_reward(request):
-    return web.json_response({"status": "success"})
+# ================= API সার্ভার (Render-এ ঘুম তাড়ানোর জন্য) =================
+async def handle_ping(request):
+    # UptimeRobot এই লিংকে হিট করলে সাথে সাথে Response দেবে
+    return web.Response(text="Bot is running perfectly!")
 
 async def start_web_server():
     app = web.Application()
-    app.router.add_get('/api/user', handle_get_user)
-    app.router.add_post('/api/reward', handle_add_reward)
+    app.router.add_get('/', handle_ping)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', PORT)
@@ -72,7 +71,7 @@ async def start_web_server():
 
 async def main():
     await start_web_server()
-    print("Bot and API Server Started...")
+    print("Bot is running...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
