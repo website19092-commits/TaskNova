@@ -10,7 +10,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Monetag SDK (আপনার দেওয়া লিংক) -->
+    <!-- Monetag SDK -->
     <script src='//libtl.com/sdk.js' data-zone='12143232' data-sdk='show_12143232'></script>
 
     <style>
@@ -97,7 +97,8 @@
         </div>
     </div>
 
-    <div class="premium-banner">
+    <!-- প্রিমিয়াম সেকশন -->
+    <div class="premium-banner" id="premiumBanner">
         <div>
             <h4><i class="fa-solid fa-crown"></i> Go Premium</h4>
             <p style="font-size: 11px; opacity: 0.8; margin-left: 34px;">Unlimited tasks!</p>
@@ -124,8 +125,8 @@
         tg.expand(); 
 
         const user = tg.initDataUnsafe?.user;
-        // আপনার Render API লিংক (পরে বসাবেন)
-        const API_URL = "https://your-render-app.onrender.com"; 
+        // আপনার নতুন Render API লিংক
+        const API_URL = "https://tasknova-6mjt.onrender.com"; 
 
         if (user) {
             document.getElementById('userName').innerText = user.first_name + (user.last_name ? " " + user.last_name : "");
@@ -148,6 +149,11 @@
                 if (data) {
                     document.getElementById('userBalance').innerText = `$${(data.balance || 0).toFixed(2)}`;
                     document.getElementById('holdBalance').innerText = `$${(data.hold_balance || 0).toFixed(2)}`;
+                    
+                    // যদি ইউজার প্রিমিয়াম হয়, তবে ব্যানার লুকিয়ে ফেলা
+                    if (data.is_premium) {
+                        document.getElementById('premiumBanner').style.display = 'none';
+                    }
                 }
             } catch (error) { console.log("Error:", error); }
         }
@@ -155,16 +161,13 @@
         // Monetag অ্যাড কল করা
         function watchAd() {
             const overlay = document.getElementById('adOverlay');
-            overlay.style.display = 'flex'; // লোডিং দেখানো
+            overlay.style.display = 'flex'; 
 
-            // Monetag SDK Function
             show_12143232().then(() => {
-                // অ্যাড সফলভাবে দেখা হলে
                 overlay.style.display = 'none';
                 tg.showAlert("🎉 Ad watched successfully! $0.01 added to your Hold Balance.");
-                addReward(user.id, 0.01); // সার্ভারে রিওয়ার্ড পাঠানো
+                addReward(user.id, 0.01); 
             }).catch((error) => {
-                // অ্যাড বন্ধ করলে বা এরর হলে
                 overlay.style.display = 'none';
                 tg.showAlert("❌ Ad was skipped or failed to load. Please try again.");
             });
@@ -178,12 +181,40 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: userId, amount: amount })
                 });
-                fetchUserData(userId); // সাথে সাথে ব্যালেন্স আপডেট
+                fetchUserData(userId); 
             } catch (error) { console.log("Reward Error:", error); }
         }
 
+        // ================= প্রিমিয়াম পেমেন্ট (Telegram Stars) =================
+        async function buyPremium() {
+            tg.showPopup({
+                title: 'Premium Membership',
+                message: 'Get unlimited tasks and no ads for 50 Telegram Stars!',
+                buttons: [
+                    {id: 'pay', type: 'default', text: 'Pay Now'},
+                    {id: 'cancel', type: 'cancel'}
+                ]
+            }, async (buttonId) => {
+                if (buttonId === 'pay') {
+                    // এখানে আমরা ব্যাকএন্ড থেকে ইনভয়েস লিংক চাইব
+                    try {
+                        tg.showAlert("Opening payment gateway...");
+                        // (পরে এখানে API কল করে ইনভয়েস লিংক নিয়ে tg.openInvoice() কল করতে হবে)
+                        
+                        // আপাতত ডেমো পেমেন্ট সাকসেস (ব্যাকএন্ড যুক্ত হলে আসল পেমেন্ট হবে)
+                        setTimeout(() => {
+                            tg.showAlert("✅ Premium Activated! (Demo)");
+                            document.getElementById('premiumBanner').style.display = 'none';
+                        }, 2000);
+                        
+                    } catch (e) {
+                        tg.showAlert("Payment failed!");
+                    }
+                }
+            });
+        }
+
         function openTask(type) { tg.showAlert("Coming soon!"); }
-        function buyPremium() { tg.showAlert("Premium payment will open here."); }
     </script>
 </body>
 </html>
