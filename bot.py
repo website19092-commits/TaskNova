@@ -2,14 +2,14 @@ import asyncio
 import logging
 import os
 import json
+import datetime
+import uuid
 import firebase_admin
 from firebase_admin import credentials, db
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice, PreCheckoutQuery, Message
 from aiohttp import web
-import datetime
-import uuid
 
 # ================= CONFIGURATION =================
 BOT_TOKEN = "8715331593:AAGGhE0Ghj-5fX7B691WWxGLojWPsgbW6T8"
@@ -118,9 +118,9 @@ async def get_user(request):
     return web.json_response({"balance": 0, "is_premium": False})
 
 async def add_reward(request):
-    # This is called by HTML for Ads and Lucky Box
     data = await request.json()
-    uid, amt = str(data.get("userId")), float(data.get("amount", 0))
+    uid = str(data.get("userId"))
+    amt = float(data.get("amount", 0))
     ref = db.reference(f'users/{uid}')
     if ref.get():
         ref.update({'balance': db.ServerValue.increment(amt)})
