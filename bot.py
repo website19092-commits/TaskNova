@@ -21,9 +21,8 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# ================= ফায়ারবেস কানেকশন =================
+# ফায়ারবেস কানেকশন
 try:
-    # Render-এর Environment Variable থেকে JSON চাবি লোড করা
     cred_json = os.environ.get("FIREBASE_CREDENTIALS")
     if cred_json:
         cred_dict = json.loads(cred_json)
@@ -31,7 +30,7 @@ try:
         firebase_admin.initialize_app(cred, {'databaseURL': FIREBASE_URL})
         print("Firebase Connected Successfully!")
     else:
-        print("Warning: FIREBASE_CREDENTIALS not found in Environment Variables.")
+        print("Warning: FIREBASE_CREDENTIALS not found.")
 except Exception as e:
     print(f"Firebase Error: {e}")
 
@@ -63,13 +62,7 @@ def create_user_if_not_exist(user_id, first_name):
     ref = db.reference(f'users/{user_id}')
     user = ref.get()
     if not user:
-        new_user = {
-            "name": first_name,
-            "balance": 0.00,
-            "hold_balance": 0.00,
-            "refs": 0,
-            "is_premium": False
-        }
+        new_user = {"name": first_name, "balance": 0.00, "hold_balance": 0.00, "refs": 0, "is_premium": False}
         ref.set(new_user)
         return new_user
     return user
@@ -93,6 +86,7 @@ def get_admin_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📢 Broadcast Message"), KeyboardButton(text="👤 Total Users")],
+            [KeyboardButton(text="💸 Withdraw Requests")], # নতুন বাটন
             [KeyboardButton(text="⚙️ Back to Main Menu")]
         ],
         resize_keyboard=True
@@ -102,17 +96,9 @@ def get_admin_keyboard():
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     uid = str(message.from_user.id)
-    if uid not in user_langs:
-        user_langs[uid] = "en"
-    
-    # ডাটাবেসে ইউজার সেভ করা
+    if uid not in user_langs: user_langs[uid] = "en"
     create_user_if_not_exist(uid, message.from_user.first_name)
-        
-    await message.answer(
-        get_text("welcome", name=message.from_user.first_name),
-        reply_markup=get_main_keyboard(),
-        parse_mode="Markdown"
-    )
+    await message.answer(get_text("welcome", name=message.from_user.first_name), reply_markup=get_main_keyboard(), parse_mode="Markdown")
 
 # ================= ভাষা পরিবর্তন (/lang) =================
 @dp.message(Command("lang"))
@@ -124,13 +110,10 @@ async def cmd_lang(message: types.Message):
 async def btn_balance(message: types.Message):
     uid = str(message.from_user.id)
     user_data = get_user(uid)
-    
     if user_data:
         bal = f"{user_data.get('balance', 0.0):.2f}"
         hold = f"{user_data.get('hold_balance', 0.0):.2f}"
-    else:
-        bal, hold = "0.00", "0.00"
-        
+    else: bal, hold = "0.00", "0.00"
     await message.answer(get_text("balance", balance=bal, hold=hold), parse_mode="Markdown")
 
 @dp.message(F.text == "👥 Referrals")
@@ -167,10 +150,64 @@ async def admin_back(message: types.Message):
 @dp.message(F.text == "👤 Total Users")
 async def admin_total_users(message: types.Message):
     if str(message.from_user.id) != ADMIN_ID: return
-    users_ref = db.reference('users')
-    users = users_ref.get()
+    users = db.reference('users').get()
     count = len(users) if users else 0
     await message.answer(get_text("admin_total_users", count=count), parse_mode="Markdown")
+
+# ================= 💸 Withdraw Requests (Admin Panel) =================
+@dp.message(F.text == "💸 Withdraw Requests")
+async def admin_withdraw_requests(message: types.Message):
+    if str(message.from_user.id) != ADMIN_ID: return
+    
+    requests = db.reference('withdrawals').get()
+    if not requests:
+        await message.answer("✅ No pending withdraw requests.")
+        return
+        
+    pending_found = False
+    for key, req in requests.items():
+        if req.get('status') == 'pending':
+            pending_found = True
+            text = f"👤 User ID: `{req['userId']}`\n💵 Amount: ${req['amount']}\n📱 {req['method']}: `{req['number']}`"
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="✅ Approve", callback_data=f"app_wd_{key}"), 
+                 InlineKeyboardButton(text="❌ Reject", callback_data=f"rej_wd_{key}")]
+            ])
+            await message.answer(text, reply_markup=kb, parse_mode="Markdown")
+            
+    if not pending_found:
+        await message.answer("✅ No pending requests at the moment.")
+
+@dp.callback_query(F.data.startswith("app_wd_"))
+async def approve_withdraw(callback: types.CallbackQuery):
+    if str(callback.from_user.id) != ADMIN_ID: return
+    req_id = callback.data.replace("app_wd_", "")
+    
+    ref = db.reference(f'withdrawals/{req_id}')
+    req = ref.get()
+    
+    if req and req['status'] == 'pending':
+        user_ref = db.reference(f"users/{req['userId']}")
+        user = user_ref.get()
+        if user and user['balance'] >= float(req['amount']):
+            user_ref.update({'balance': user['balance'] - float(req['amount'])})
+            ref.update({'status': 'approved'})
+            await callback.message.edit_text(f"✅ Approved for User: `{req['userId']}`\nAmount: ${req['amount']}", parse_mode="Markdown")
+            try:
+                await bot.send_message(req['userId'], f"🎉 আপনার ${req['amount']} উইথড্র রিকোয়েস্ট অ্যাপ্রুভ হয়েছে! বিকাশে টাকা পাঠানো হয়েছে।")
+            except: pass
+        else:
+            await callback.answer("User does not have enough balance!", show_alert=True)
+    else:
+        await callback.answer("Already processed!")
+
+@dp.callback_query(F.data.startswith("rej_wd_"))
+async def reject_withdraw(callback: types.CallbackQuery):
+    if str(callback.from_user.id) != ADMIN_ID: return
+    req_id = callback.data.replace("rej_wd_", "")
+    db.reference(f'withdrawals/{req_id}').update({'status': 'rejected'})
+    await callback.message.edit_text("❌ Rejected.")
+    await callback.answer("Rejected")
 
 @dp.message(F.text == "📢 Broadcast Message")
 async def admin_broadcast_prompt(message: types.Message):
@@ -187,34 +224,26 @@ async def cancel_admin(message: types.Message):
 @dp.message()
 async def handle_admin_input(message: types.Message):
     if str(message.from_user.id) != ADMIN_ID: return
-    
     state = admin_states.get(message.from_user.id)
     if state == "broadcasting":
-        users_ref = db.reference('users')
-        users = users_ref.get()
+        users = db.reference('users').get()
         success = 0
-        
         if users:
             for uid in users.keys():
                 try:
                     await bot.send_message(chat_id=uid, text=message.text, parse_mode="Markdown")
                     success += 1
-                    await asyncio.sleep(0.05) # স্প্যাম ব্লক এড়াতে
-                except Exception:
-                    pass
-                    
+                    await asyncio.sleep(0.05)
+                except Exception: pass
         await message.answer(get_text("admin_broadcast_done", count=success), reply_markup=get_admin_keyboard(), parse_mode="Markdown")
         admin_states[message.from_user.id] = None
 
-# ================= API সার্ভার (HTML থেকে ডেটা রিসিভ করার জন্য) =================
+# ================= API সার্ভার =================
 async def handle_get_user(request):
     user_id = request.query.get("userId")
-    if not user_id:
-        return web.json_response({"error": "Missing userId"}, status=400)
-        
+    if not user_id: return web.json_response({"error": "Missing userId"}, status=400)
     user = get_user(user_id)
-    if not user:
-        user = {"balance": 0.00, "hold_balance": 0.00, "name": "User", "refs": 0}
+    if not user: user = {"balance": 0.00, "hold_balance": 0.00, "name": "User", "refs": 0}
     return web.json_response(user)
 
 async def handle_add_reward(request):
@@ -222,19 +251,33 @@ async def handle_add_reward(request):
         data = await request.json()
         user_id = str(data.get("userId"))
         amount = float(data.get("amount", 0))
-        
         user_ref = db.reference(f'users/{user_id}')
         user = user_ref.get()
-        
         if user:
             current_hold = user.get('hold_balance', 0.0)
             user_ref.update({'hold_balance': current_hold + amount})
-            return web.json_response({"status": "success", "new_hold": current_hold + amount})
-        return web.json_response({"status": "user_not_found"}, status=404)
-    except Exception as e:
-        return web.json_response({"error": str(e)}, status=500)
+            return web.json_response({"status": "success"})
+        return web.json_response({"status": "error", "message": "user_not_found"}, status=404)
+    except Exception as e: return web.json_response({"status": "error", "message": str(e)}, status=500)
 
-# রেন্ডারের পিং সার্ভার
+async def handle_withdraw(request):
+    try:
+        data = await request.json()
+        user_id = str(data.get("userId"))
+        amount = float(data.get("amount"))
+        method = data.get("method")
+        number = data.get("number")
+        
+        user = get_user(user_id)
+        if not user or user.get('balance', 0) < amount:
+            return web.json_response({"status": "error", "message": "Insufficient balance"})
+            
+        db.reference('withdrawals').push({
+            "userId": user_id, "amount": amount, "method": method, "number": number, "status": "pending"
+        })
+        return web.json_response({"status": "success"})
+    except Exception as e: return web.json_response({"status": "error", "message": str(e)})
+
 async def handle_ping(request):
     return web.Response(text="Bot is running perfectly with Firebase!")
 
@@ -243,7 +286,7 @@ async def start_web_server():
     app.router.add_get('/', handle_ping)
     app.router.add_get('/api/user', handle_get_user)
     app.router.add_post('/api/reward', handle_add_reward)
-    
+    app.router.add_post('/api/withdraw', handle_withdraw) # নতুন রাউট
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', PORT)
