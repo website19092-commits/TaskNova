@@ -12,7 +12,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice, Pre
 from aiohttp import web
 
 # ================= CONFIGURATION =================
-BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM"
+BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM" # আপনার নতুন টোকেন এখানে বসানো হয়েছে
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 ADMIN_ID = "8021210361"
 PORT = int(os.environ.get("PORT", 8080))
@@ -31,11 +31,11 @@ try:
     if cred_json:
         cred = credentials.Certificate(json.loads(cred_json))
         firebase_admin.initialize_app(cred, {'databaseURL': FIREBASE_URL})
-        print("Firebase Connected Successfully!")
+        print("✅ Firebase Connected Successfully!")
     else:
-        print("Warning: FIREBASE_CREDENTIALS env variable not found.")
+        print("⚠️ Warning: FIREBASE_CREDENTIALS env variable not found.")
 except Exception as e:
-    print(f"Firebase Error: {e}")
+    print(f"❌ Firebase Error: {e}")
 
 def get_main_keyboard():
     return ReplyKeyboardMarkup(
@@ -70,7 +70,6 @@ async def cmd_admin(message: types.Message):
     if str(message.from_user.id) != ADMIN_ID: 
         return await message.answer("⛔ Access Denied. You are not the admin.")
     
-    # HTML-এর সাথে ম্যাচ করার জন্য #admin ব্যবহার করা হলো
     admin_link = f"{WEB_APP_URL}#admin"
     
     text = (
@@ -130,14 +129,13 @@ async def create_invoice(request):
     data = await request.json()
     uid = data.get("userId")
     
-    # Create Telegram Star Invoice
     invoice_link = await bot.create_invoice_link(
         title="Premium Subscription",
         description="Unlock unlimited ads, higher rewards, and a premium badge.",
         payload=f"premium_{uid}",
-        provider_token="", # Telegram Stars uses empty string
+        provider_token="", 
         currency="XTR",
-        prices=[LabeledPrice(label="Premium", amount=50)] # 50 Stars
+        prices=[LabeledPrice(label="Premium", amount=50)] 
     )
     return web.json_response({"invoiceLink": invoice_link})
 
@@ -153,13 +151,11 @@ async def submit_withdraw(request):
     user = ref.get()
     
     if user and user.get('balance', 0) >= amount:
-        # Deduct from balance, add to hold_balance
         ref.update({
             'balance': db.ServerValue.increment(-amount),
             'hold_balance': db.ServerValue.increment(amount)
         })
         
-        # Create Withdrawal Request
         wd_id = str(uuid.uuid4())[:8]
         wd_ref = db.reference(f'withdrawals/{wd_id}')
         wd_ref.set({
@@ -182,7 +178,6 @@ async def get_user_withdrawals(request):
     for k, v in withdrawals.items():
         v['id'] = k
         result.append(v)
-    # Sort by date descending
     result.sort(key=lambda x: x.get('date', ''), reverse=True)
     return web.json_response(result)
 
@@ -206,7 +201,7 @@ async def admin_get_withdrawals(request):
 async def admin_process_withdraw(request):
     data = await request.json()
     wd_id = data.get("wdId")
-    action = data.get("action") # 'approve' or 'reject'
+    action = data.get("action") 
     
     wd_ref = db.reference(f'withdrawals/{wd_id}')
     wd = wd_ref.get()
@@ -223,7 +218,6 @@ async def admin_process_withdraw(request):
         user_ref.update({'hold_balance': db.ServerValue.increment(-amount)})
     else:
         wd_ref.update({'status': 'rejected'})
-        # Refund money
         user_ref.update({
             'hold_balance': db.ServerValue.increment(-amount),
             'balance': db.ServerValue.increment(amount)
@@ -261,26 +255,36 @@ async def admin_broadcast(request):
 
 # ================= POSTBACK (CPAGrip/Monetag) =================
 async def cpa_postback(request):
-    # Example URL: https://your-render-url.com/api/postback?user_id=123&amount=0.05&secret=TaskNovaSecret123
     query = request.query
     uid = query.get("user_id")
     amount_str = query.get("amount")
     secret = query.get("secret")
     
+    print(f"--- 🚀 NEW POSTBACK RECEIVED: User: {uid}, Amount: {amount_str} ---")
+    
     if secret != POSTBACK_SECRET:
+        print("❌ ERROR: Invalid Secret!")
         return web.Response(text="Invalid Secret", status=403)
         
     if not uid or not amount_str:
+        print("❌ ERROR: Missing parameters!")
         return web.Response(text="Missing parameters", status=400)
         
     try:
         amount = float(amount_str)
         ref = db.reference(f'users/{uid}')
-        if ref.get():
+        user_data = ref.get()
+        
+        if user_data:
             ref.update({'balance': db.ServerValue.increment(amount)})
+            print(f"✅ SUCCESS: Added ${amount} to user {uid}. New balance updated.")
             return web.Response(text="OK", status=200)
-        return web.Response(text="User not found", status=404)
+        else:
+            print(f"❌ ERROR: User {uid} not found in Firebase Database.")
+            return web.Response(text="User not found in database", status=404)
+            
     except Exception as e:
+        print(f"❌ POSTBACK EXCEPTION ERROR: {e}")
         return web.Response(text="Error", status=500)
 
 async def ping(request): return web.Response(text="SM TaskNova Bot is running!")
@@ -288,7 +292,6 @@ async def ping(request): return web.Response(text="SM TaskNova Bot is running!")
 # ================= APP START =================
 async def start_web():
     app = web.Application()
-    # Main Route
     app.router.add_get('/', ping)
     
     # User API
@@ -298,7 +301,7 @@ async def start_web():
     app.router.add_post('/api/withdraw', submit_withdraw)
     app.router.add_get('/api/user/withdrawals', get_user_withdrawals)
     
-    # Postback API (New)
+    # Postback API
     app.router.add_get('/api/postback', cpa_postback)
     
     # Admin API
@@ -312,7 +315,7 @@ async def start_web():
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', PORT)
     await site.start()
-    print(f"Web server started on port {PORT}")
+    print(f"✅ Web server started on port {PORT}")
 
 async def main():
     await start_web()
