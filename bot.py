@@ -117,7 +117,8 @@ async def cmd_admin(message: types.Message):
     )
     await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
 
-@dp.message(F.text == "💰 Balance")
+# কমান্ড এবং বাটন দুইটাই কাজ করবে
+@dp.message(Command("balance") | (F.text == "💰 Balance"))
 async def btn_balance(message: types.Message):
     try:
         user = db.reference(f'users/{message.from_user.id}').get()
@@ -127,7 +128,7 @@ async def btn_balance(message: types.Message):
     except Exception as e:
         await message.answer("⚠️ **Error loading balance.**\n**ব্যালেন্স লোড করতে সমস্যা হচ্ছে।**")
 
-@dp.message(F.text == "📜 History")
+@dp.message(Command("history") | (F.text == "📜 History"))
 async def btn_history(message: types.Message):
     try:
         uid = str(message.from_user.id)
@@ -136,7 +137,6 @@ async def btn_history(message: types.Message):
         if not withdrawals:
             return await message.answer("📜 **No withdrawal history found.**\n**কোনো উইথড্র হিস্ট্রি পাওয়া যায়নি।**")
         
-        # ডাটা সেফটি: নিশ্চিত করা হলো withdrawals একটি ডিকশনারি
         if not isinstance(withdrawals, dict):
             return await message.answer("⚠️ **Invalid data format.**\n**ডাটা ফরম্যাটে সমস্যা আছে।**")
 
@@ -168,7 +168,7 @@ async def btn_history(message: types.Message):
         print(f"History Error: {e}")
         await message.answer("⚠️ **Error loading history. Please try again later.**\n**হিস্ট্রি লোড করতে সমস্যা হচ্ছে। আবার চেষ্টা করুন।**")
 
-@dp.message(F.text == "👥 Referrals")
+@dp.message(Command("refer") | (F.text == "👥 Referrals"))
 async def btn_referrals(message: types.Message):
     try:
         uid = str(message.from_user.id)
@@ -184,7 +184,7 @@ async def btn_referrals(message: types.Message):
     except Exception as e:
         await message.answer("⚠️ **Error loading referral link.**")
 
-@dp.message(F.text == "💬 Help")
+@dp.message(Command("help") | (F.text == "💬 Help"))
 async def btn_help(message: types.Message):
     text = (
         "💬 **Help & Support / হেল্প এবং সাপোর্ট**\n\n"
