@@ -12,13 +12,12 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice, Pre
 from aiohttp import web
 
 # ================= CONFIGURATION =================
-BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM" # আপনার নতুন টোকেন এখানে বসানো হয়েছে
+BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM" 
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 ADMIN_ID = "8021210361"
 PORT = int(os.environ.get("PORT", 8080))
 FIREBASE_URL = "https://tasknova-19cf2-default-rtdb.firebaseio.com/"
 
-# Postback Secret (CPAGrip/Monetag সেটআপে ব্যবহার করবেন)
 POSTBACK_SECRET = "TaskNovaSecret123" 
 
 logging.basicConfig(level=logging.INFO)
@@ -35,7 +34,7 @@ try:
     else:
         print("⚠️ Warning: FIREBASE_CREDENTIALS env variable not found.")
 except Exception as e:
-    print(f"❌ Firebase Error: {e}")
+    print(f"❌ Firebase Setup Error: {e}")
 
 def get_main_keyboard():
     return ReplyKeyboardMarkup(
@@ -100,12 +99,11 @@ async def success_payment_handler(message: Message):
         ref.update({'is_premium': True})
     await message.answer(
         "🎉 **Premium Activated!**\n\n"
-        "Thank you for your purchase. You now have unlimited ads and higher rewards!\n"
-        "Open the app to enjoy your benefits.",
+        "Thank you for your purchase.",
         parse_mode="Markdown"
     )
 
-# ================= API ENDPOINTS (For Web App) =================
+# ================= API ENDPOINTS =================
 async def get_user(request):
     user_id = request.query.get("userId")
     user = db.reference(f'users/{user_id}').get()
@@ -128,10 +126,9 @@ async def add_reward(request):
 async def create_invoice(request):
     data = await request.json()
     uid = data.get("userId")
-    
     invoice_link = await bot.create_invoice_link(
         title="Premium Subscription",
-        description="Unlock unlimited ads, higher rewards, and a premium badge.",
+        description="Unlock unlimited ads.",
         payload=f"premium_{uid}",
         provider_token="", 
         currency="XTR",
@@ -146,7 +143,6 @@ async def submit_withdraw(request):
     amount = float(data.get("amount"))
     method = data.get("method")
     number = data.get("number")
-    
     ref = db.reference(f'users/{uid}')
     user = ref.get()
     
@@ -155,62 +151,39 @@ async def submit_withdraw(request):
             'balance': db.ServerValue.increment(-amount),
             'hold_balance': db.ServerValue.increment(amount)
         })
-        
         wd_id = str(uuid.uuid4())[:8]
-        wd_ref = db.reference(f'withdrawals/{wd_id}')
-        wd_ref.set({
-            "userId": uid,
-            "name": user.get('name', 'User'),
-            "amount": amount,
-            "method": method,
-            "number": number,
-            "status": "pending",
-            "date": datetime.datetime.now().isoformat()
+        db.reference(f'withdrawals/{wd_id}').set({
+            "userId": uid, "name": user.get('name', 'User'),
+            "amount": amount, "method": method, "number": number,
+            "status": "pending", "date": datetime.datetime.now().isoformat()
         })
         return web.json_response({"status": "success"})
-    else:
-        return web.json_response({"status": "error", "message": "Insufficient balance"})
+    return web.json_response({"status": "error", "message": "Insufficient balance"})
 
 async def get_user_withdrawals(request):
     uid = request.query.get("userId")
     withdrawals = db.reference('withdrawals').order_by_child('userId').equal_to(uid).get() or {}
-    result = []
-    for k, v in withdrawals.items():
-        v['id'] = k
-        result.append(v)
+    result = [dict(v, id=k) for k, v in withdrawals.items()]
     result.sort(key=lambda x: x.get('date', ''), reverse=True)
     return web.json_response(result)
 
 # ================= ADMIN API =================
 async def admin_get_users(request):
     users = db.reference('users').get() or {}
-    user_list = []
-    for uid, data in users.items():
-        data['id'] = uid
-        user_list.append(data)
-    return web.json_response(user_list)
+    return web.json_response([dict(v, id=k) for k, v in users.items()])
 
 async def admin_get_withdrawals(request):
     wds = db.reference('withdrawals').order_by_child('status').equal_to('pending').get() or {}
-    result = []
-    for k, v in wds.items():
-        v['id'] = k
-        result.append(v)
-    return web.json_response(result)
+    return web.json_response([dict(v, id=k) for k, v in wds.items()])
 
 async def admin_process_withdraw(request):
     data = await request.json()
-    wd_id = data.get("wdId")
-    action = data.get("action") 
-    
+    wd_id, action = data.get("wdId"), data.get("action") 
     wd_ref = db.reference(f'withdrawals/{wd_id}')
     wd = wd_ref.get()
-    
     if not wd or wd.get('status') != 'pending':
         return web.json_response({"status": "error", "message": "Invalid request"})
-        
-    uid = wd['userId']
-    amount = wd['amount']
+    uid, amount = wd['userId'], wd['amount']
     user_ref = db.reference(f'users/{uid}')
     
     if action == 'approve':
@@ -218,36 +191,26 @@ async def admin_process_withdraw(request):
         user_ref.update({'hold_balance': db.ServerValue.increment(-amount)})
     else:
         wd_ref.update({'status': 'rejected'})
-        user_ref.update({
-            'hold_balance': db.ServerValue.increment(-amount),
-            'balance': db.ServerValue.increment(amount)
-        })
-        
+        user_ref.update({'hold_balance': db.ServerValue.increment(-amount), 'balance': db.ServerValue.increment(amount)})
     return web.json_response({"status": "success"})
 
 async def admin_update_balance(request):
     data = await request.json()
-    uid = str(data.get("userId"))
-    amount = float(data.get("amount"))
-    action = data.get("action") 
-    
+    uid, amount, action = str(data.get("userId")), float(data.get("amount")), data.get("action") 
     ref = db.reference(f'users/{uid}')
     if ref.get():
-        if action == 'add':
-            ref.update({'balance': db.ServerValue.increment(amount)})
-        else:
-            ref.update({'balance': db.ServerValue.increment(-amount)})
+        if action == 'add': ref.update({'balance': db.ServerValue.increment(amount)})
+        else: ref.update({'balance': db.ServerValue.increment(-amount)})
         return web.json_response({"status": "success"})
     return web.json_response({"status": "error", "message": "User not found"})
 
 async def admin_broadcast(request):
     data = await request.json()
-    text = data.get("text")
     users = db.reference('users').get() or {}
     success = 0
     for uid in users.keys():
         try:
-            await bot.send_message(chat_id=uid, text=text, parse_mode="Markdown")
+            await bot.send_message(chat_id=uid, text=data.get("text"), parse_mode="Markdown")
             success += 1
             await asyncio.sleep(0.05)
         except: pass
@@ -255,20 +218,16 @@ async def admin_broadcast(request):
 
 # ================= POSTBACK (CPAGrip/Monetag) =================
 async def cpa_postback(request):
-    query = request.query
-    uid = query.get("user_id")
-    amount_str = query.get("amount")
-    secret = query.get("secret")
+    uid = request.query.get("user_id")
+    amount_str = request.query.get("amount")
+    secret = request.query.get("secret")
     
-    print(f"--- 🚀 NEW POSTBACK RECEIVED: User: {uid}, Amount: {amount_str} ---")
-    
+    # সিকিউরিটি চেক
     if secret != POSTBACK_SECRET:
-        print("❌ ERROR: Invalid Secret!")
-        return web.Response(text="Invalid Secret", status=403)
+        return web.Response(text="❌ Error: Invalid Secret Key!", status=403)
         
     if not uid or not amount_str:
-        print("❌ ERROR: Missing parameters!")
-        return web.Response(text="Missing parameters", status=400)
+        return web.Response(text="❌ Error: Missing user_id or amount!", status=400)
         
     try:
         amount = float(amount_str)
@@ -276,16 +235,16 @@ async def cpa_postback(request):
         user_data = ref.get()
         
         if user_data:
+            # ইউজার থাকলে টাকা অ্যাড হবে
             ref.update({'balance': db.ServerValue.increment(amount)})
-            print(f"✅ SUCCESS: Added ${amount} to user {uid}. New balance updated.")
             return web.Response(text="OK", status=200)
         else:
-            print(f"❌ ERROR: User {uid} not found in Firebase Database.")
-            return web.Response(text="User not found in database", status=404)
+            # ইউজার না থাকলে এরর মেসেজ দেখাবে
+            return web.Response(text=f"❌ Error: User ID {uid} not found in Firebase Database. Please press /start in bot first.", status=404)
             
     except Exception as e:
-        print(f"❌ POSTBACK EXCEPTION ERROR: {e}")
-        return web.Response(text="Error", status=500)
+        # আসল এররটা ব্রাউজারে দেখাবে
+        return web.Response(text=f"❌ Firebase Error: {str(e)}", status=500)
 
 async def ping(request): return web.Response(text="SM TaskNova Bot is running!")
 
@@ -293,18 +252,12 @@ async def ping(request): return web.Response(text="SM TaskNova Bot is running!")
 async def start_web():
     app = web.Application()
     app.router.add_get('/', ping)
-    
-    # User API
     app.router.add_get('/api/user', get_user)
     app.router.add_post('/api/reward', add_reward)
     app.router.add_post('/api/create-invoice', create_invoice)
     app.router.add_post('/api/withdraw', submit_withdraw)
     app.router.add_get('/api/user/withdrawals', get_user_withdrawals)
-    
-    # Postback API
     app.router.add_get('/api/postback', cpa_postback)
-    
-    # Admin API
     app.router.add_get('/api/admin/users', admin_get_users)
     app.router.add_get('/api/admin/withdrawals', admin_get_withdrawals)
     app.router.add_post('/api/admin/process-withdraw', admin_process_withdraw)
@@ -315,7 +268,6 @@ async def start_web():
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', PORT)
     await site.start()
-    print(f"✅ Web server started on port {PORT}")
 
 async def main():
     await start_web()
