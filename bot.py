@@ -11,7 +11,6 @@ from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice, PreCheckoutQuery, Message
 from aiohttp import web
 
-# ================= CONFIGURATION =================
 BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM"
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 ADMIN_ID = "8021210361"
@@ -25,7 +24,6 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# ================= FIREBASE SETUP =================
 try:
     cred_json = os.environ.get("FIREBASE_CREDENTIALS")
     if cred_json:
@@ -45,7 +43,6 @@ def get_main_keyboard():
         ], resize_keyboard=True, is_persistent=True
     )
 
-# ================= TELEGRAM HANDLERS =================
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     uid = str(message.from_user.id)
@@ -54,6 +51,18 @@ async def cmd_start(message: types.Message):
     
     if user_data and user_data.get('banned', False):
         return await message.answer("⛔ **Your account is permanently banned.**")
+
+    args = message.text.split()
+    if len(args) > 1 and args[1].startswith("ref_") and not user_data:
+        referrer_id = args[1].replace("ref_", "")
+        if referrer_id != uid:
+            ref_ref = db.reference(f'users/{referrer_id}')
+            if ref_ref.get():
+                ref_ref.child('balance').transaction(lambda current: max(0, (current or 0)) + 0.05)
+                ref_ref.child('refs').transaction(lambda current: (current or 0) + 1)
+                try:
+                    await bot.send_message(referrer_id, "🎉 **New Referral!**\nYou earned $0.05 for inviting a friend.")
+                except: pass
 
     if not user_data:
         ref.set({
@@ -77,7 +86,6 @@ async def cmd_admin(message: types.Message):
         return await message.answer("⛔ Access Denied. You are not the admin.")
     
     admin_link = f"{WEB_APP_URL}admin.html"
-    
     text = (
         "👑 **𝗦𝗠. 𝗧𝗮𝘀𝗸𝗡𝗼𝘃𝗮 - 𝗣𝗿𝗲𝗺𝗶𝘂𝗺 𝗔𝗱𝗺𝗶𝗻**\n\n"
         "🛡️ Welcome to the master control panel.\n"
@@ -89,11 +97,35 @@ async def cmd_admin(message: types.Message):
 @dp.message(F.text == "💰 Balance")
 async def btn_balance(message: types.Message):
     user = db.reference(f'users/{message.from_user.id}').get()
-    bal = f"{user.get('balance', 0.0):.2f}" if user else "0.00"
+    bal = max(0, user.get('balance', 0.0)) if user else 0.0
     hold = f"{user.get('hold_balance', 0.0):.2f}" if user else "0.00"
-    await message.answer(f"💰 **Balance:** ${bal}\n⏳ **Hold:** ${hold}", parse_mode="Markdown")
+    await message.answer(f"💰 **Balance:** ${bal:.2f}\n⏳ **Hold:** ${hold}", parse_mode="Markdown")
 
-# ================= PREMIUM (TELEGRAM STARS) =================
+@dp.message(F.text == "👥 Referrals")
+async def btn_referrals(message: types.Message):
+    uid = str(message.from_user.id)
+    ref_link = f"https://t.me/SMTaskNova_bot?start=ref_{uid}"
+    text = (
+        "👥 **Invite & Earn**\n\n"
+        "Share your link with friends and earn $0.05 for every new user!\n\n"
+        f"🔗 **Your Link:**\n`{ref_link}`\n\n"
+        "_(Tap the link to copy)_"
+    )
+    await message.answer(text, parse_mode="Markdown")
+
+@dp.message(F.text == "⚙️ Settings")
+async def btn_settings(message: types.Message):
+    await message.answer("⚙️ **Settings**\n\nLanguage and other settings are coming soon!")
+
+@dp.message(F.text == "💬 Help")
+async def btn_help(message: types.Message):
+    text = (
+        "💬 **Help & Support**\n\n"
+        "If you face any issues, please contact our support team:\n\n"
+        "👉 @SM_Shakib_Hasan"
+    )
+    await message.answer(text, parse_mode="Markdown")
+
 @dp.pre_checkout_query()
 async def pre_checkout_handler(pre_checkout_query: PreCheckoutQuery):
     await pre_checkout_query.answer(ok=True)
@@ -104,13 +136,8 @@ async def success_payment_handler(message: Message):
     ref = db.reference(f'users/{uid}')
     if ref.get():
         ref.update({'is_premium': True})
-    await message.answer(
-        "🎉 **Premium Activated!**\n\n"
-        "Thank you for your purchase.",
-        parse_mode="Markdown"
-    )
+    await message.answer("🎉 **Premium Activated!**\n\nThank you for your purchase.", parse_mode="Markdown")
 
-# ================= API ENDPOINTS =================
 async def get_user(request):
     user_id = request.query.get("userId")
     user = db.reference(f'users/{user_id}').get()
@@ -118,7 +145,7 @@ async def get_user(request):
         if user.get('banned', False):
             return web.json_response({"error": "banned", "message": "Account is banned"})
         return web.json_response({
-            "balance": user.get('balance', 0.0),
+            "balance": max(0, user.get('balance', 0.0)),
             "is_premium": user.get('is_premium', False)
         })
     return web.json_response({"balance": 0, "is_premium": False})
@@ -129,23 +156,19 @@ async def add_reward(request):
     amt = float(data.get("amount", 0))
     ref = db.reference(f'users/{uid}')
     if ref.get():
-        ref.child('balance').transaction(lambda current: (current or 0) + amt)
+        ref.child('balance').transaction(lambda current: max(0, (current or 0)) + amt)
     return web.json_response({"status": "success"})
 
 async def create_invoice(request):
     data = await request.json()
     uid = data.get("userId")
     invoice_link = await bot.create_invoice_link(
-        title="Premium Subscription",
-        description="Unlock unlimited ads.",
-        payload=f"premium_{uid}",
-        provider_token="", 
-        currency="XTR",
+        title="Premium Subscription", description="Unlock unlimited ads.",
+        payload=f"premium_{uid}", provider_token="", currency="XTR",
         prices=[LabeledPrice(label="Premium", amount=50)] 
     )
     return web.json_response({"invoiceLink": invoice_link})
 
-# ================= WITHDRAW SYSTEM =================
 async def submit_withdraw(request):
     data = await request.json()
     uid = str(data.get("userId"))
@@ -155,8 +178,8 @@ async def submit_withdraw(request):
     ref = db.reference(f'users/{uid}')
     user = ref.get()
     
-    if user and user.get('balance', 0) >= amount:
-        ref.child('balance').transaction(lambda current: (current or 0) - amount)
+    if user and max(0, user.get('balance', 0)) >= amount:
+        ref.child('balance').transaction(lambda current: max(0, (current or 0) - amount))
         ref.child('hold_balance').transaction(lambda current: (current or 0) + amount)
         
         wd_id = str(uuid.uuid4())[:8]
@@ -175,7 +198,6 @@ async def get_user_withdrawals(request):
     result.sort(key=lambda x: x.get('date', ''), reverse=True)
     return web.json_response(result)
 
-# ================= ADMIN API =================
 async def admin_get_users(request):
     users = db.reference('users').get() or {}
     return web.json_response([dict(v, id=k) for k, v in users.items()])
@@ -189,7 +211,6 @@ async def admin_process_withdraw(request):
     wd_id, action = data.get("wdId"), data.get("action") 
     wd_ref = db.reference(f'withdrawals/{wd_id}')
     wd = wd_ref.get()
-    
     if not wd or wd.get('status') != 'pending':
         return web.json_response({"status": "error", "message": "Invalid request"})
         
@@ -198,12 +219,11 @@ async def admin_process_withdraw(request):
     
     if action == 'approve':
         wd_ref.update({'status': 'success'})
-        user_ref.child('hold_balance').transaction(lambda current: (current or 0) - amount)
+        user_ref.child('hold_balance').transaction(lambda current: max(0, (current or 0) - amount))
     else:
         wd_ref.update({'status': 'rejected'})
-        user_ref.child('hold_balance').transaction(lambda current: (current or 0) - amount)
-        user_ref.child('balance').transaction(lambda current: (current or 0) + amount)
-        
+        user_ref.child('hold_balance').transaction(lambda current: max(0, (current or 0) - amount))
+        user_ref.child('balance').transaction(lambda current: max(0, (current or 0)) + amount)
     return web.json_response({"status": "success"})
 
 async def admin_update_balance(request):
@@ -212,37 +232,30 @@ async def admin_update_balance(request):
     ref = db.reference(f'users/{uid}')
     if ref.get():
         if action == 'add': 
-            ref.child('balance').transaction(lambda current: (current or 0) + amount)
+            ref.child('balance').transaction(lambda current: max(0, (current or 0)) + amount)
         else: 
             ref.child('balance').transaction(lambda current: max(0, (current or 0) - amount))
         return web.json_response({"status": "success"})
     return web.json_response({"status": "error", "message": "User not found"})
 
-# নতুন: ইউজার ব্যান ও আনব্যান
 async def admin_ban_user(request):
     data = await request.json()
     uid = str(data.get("userId"))
-    action = data.get("action") # 'ban' or 'unban'
-    
+    action = data.get("action")
     ref = db.reference(f'users/{uid}')
     if ref.get():
         ref.update({'banned': (action == 'ban')})
         return web.json_response({"status": "success"})
     return web.json_response({"status": "error", "message": "User not found"})
 
-# নতুন: ইউজার ডিলিট
 async def admin_delete_user(request):
     data = await request.json()
     uid = str(data.get("userId"))
-    
     try:
-        # ইউজার ডিলিট
         db.reference(f'users/{uid}').delete()
-        # ওই ইউজারের সব উইথড্র রিকোয়েস্ট ডিলিট
         wds = db.reference('withdrawals').order_by_child('userId').equal_to(uid).get() or {}
         for wd_id in wds.keys():
             db.reference(f'withdrawals/{wd_id}').delete()
-            
         return web.json_response({"status": "success"})
     except Exception as e:
         return web.json_response({"status": "error", "message": str(e)})
@@ -252,7 +265,7 @@ async def admin_broadcast(request):
     users = db.reference('users').get() or {}
     success = 0
     for uid, u_data in users.items():
-        if u_data.get('banned', False): continue # ব্যানড ইউজারদের মেসেজ যাবে না
+        if u_data.get('banned', False): continue
         try:
             await bot.send_message(chat_id=uid, text=data.get("text"), parse_mode="Markdown")
             success += 1
@@ -264,27 +277,20 @@ async def admin_send_message(request):
     data = await request.json()
     uid = str(data.get("userId"))
     text = data.get("text")
-    
-    if not uid or not text:
-        return web.json_response({"status": "error", "message": "Missing data"})
-        
+    if not uid or not text: return web.json_response({"status": "error", "message": "Missing data"})
     try:
         await bot.send_message(chat_id=uid, text=text, parse_mode="Markdown")
         return web.json_response({"status": "success"})
     except Exception as e:
         return web.json_response({"status": "error", "message": str(e)})
 
-# ================= POSTBACK (CPAGrip/Monetag) =================
 async def cpa_postback(request):
     uid = request.query.get("user_id")
     amount_str = request.query.get("amount")
     secret = request.query.get("secret")
     
-    if secret != POSTBACK_SECRET:
-        return web.Response(text="❌ Error: Invalid Secret Key!", status=403)
-        
-    if not uid or not amount_str:
-        return web.Response(text="❌ Error: Missing user_id or amount!", status=400)
+    if secret != POSTBACK_SECRET: return web.Response(text="❌ Error: Invalid Secret Key!", status=403)
+    if not uid or not amount_str: return web.Response(text="❌ Error: Missing user_id or amount!", status=400)
         
     try:
         amount = float(amount_str)
@@ -292,30 +298,26 @@ async def cpa_postback(request):
         user_data = ref.get()
         
         if user_data and not user_data.get('banned', False):
-            ref.child('balance').transaction(lambda current: (current or 0) + amount)
+            ref.child('balance').transaction(lambda current: max(0, (current or 0)) + amount)
             return web.Response(text="OK", status=200)
         else:
             return web.Response(text=f"❌ Error: User not found or banned.", status=404)
-            
     except Exception as e:
         return web.Response(text=f"❌ Firebase Error: {str(e)}", status=500)
 
 async def ping(request): return web.Response(text="SM TaskNova Bot is running!")
 
-# ================= CORS MIDDLEWARE =================
 @web.middleware
 async def cors_middleware(request, handler):
     if request.method == "OPTIONS":
         response = web.Response()
     else:
         response = await handler(request)
-    
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     return response
 
-# ================= WEBHOOK SETUP =================
 async def on_startup(app):
     webhook_url = f"{RENDER_URL}/webhook"
     await bot.set_webhook(webhook_url, drop_pending_updates=True)
@@ -331,10 +333,8 @@ async def handle_webhook(request):
     await dp.feed_update(bot, update)
     return web.Response(text="OK")
 
-# ================= APP START =================
 async def start_web():
     app = web.Application(middlewares=[cors_middleware])
-    
     app.router.add_post('/webhook', handle_webhook)
     app.router.add_get('/', ping)
     app.router.add_get('/api/user', get_user)
@@ -343,25 +343,21 @@ async def start_web():
     app.router.add_post('/api/withdraw', submit_withdraw)
     app.router.add_get('/api/user/withdrawals', get_user_withdrawals)
     app.router.add_get('/api/postback', cpa_postback)
-    
-    # Admin Routes
     app.router.add_get('/api/admin/users', admin_get_users)
     app.router.add_get('/api/admin/withdrawals', admin_get_withdrawals)
     app.router.add_post('/api/admin/process-withdraw', admin_process_withdraw)
     app.router.add_post('/api/admin/update-balance', admin_update_balance)
-    app.router.add_post('/api/admin/ban-user', admin_ban_user) # নতুন
-    app.router.add_post('/api/admin/delete-user', admin_delete_user) # নতুন
+    app.router.add_post('/api/admin/ban-user', admin_ban_user)
+    app.router.add_post('/api/admin/delete-user', admin_delete_user)
     app.router.add_post('/api/admin/broadcast', admin_broadcast)
     app.router.add_post('/api/admin/send-message', admin_send_message)
-    
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
-    
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', PORT)
     await site.start()
-    print(f"✅ Web server started on port {PORT}")
+    print(f"✅ Web Server started on port {PORT}")
 
 async def main():
     await start_web()
