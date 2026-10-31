@@ -70,7 +70,8 @@ async def cmd_admin(message: types.Message):
     if str(message.from_user.id) != ADMIN_ID: 
         return await message.answer("⛔ Access Denied. You are not the admin.")
     
-    admin_link = f"{WEB_APP_URL}#admin"
+    # এখানে #admin এর পরিবর্তে ?admin=1 করা হয়েছে
+    admin_link = f"{WEB_APP_URL}?admin=1"
     
     text = (
         "👑 **𝗦𝗠. 𝗧𝗮𝘀𝗸𝗡𝗼𝘃𝗮 - 𝗣𝗿𝗲𝗺𝗶𝘂𝗺 𝗔𝗱𝗺𝗶𝗻**\n\n"
@@ -250,7 +251,7 @@ async def cpa_postback(request):
 
 async def ping(request): return web.Response(text="SM TaskNova Bot is running!")
 
-# ================= CORS MIDDLEWARE (নতুন যোগ করা হয়েছে) =================
+# ================= CORS MIDDLEWARE =================
 @web.middleware
 async def cors_middleware(request, handler):
     if request.method == "OPTIONS":
@@ -281,7 +282,6 @@ async def handle_webhook(request):
 
 # ================= APP START =================
 async def start_web():
-    # এখানে middleware যুক্ত করা হয়েছে
     app = web.Application(middlewares=[cors_middleware])
     
     app.router.add_post('/webhook', handle_webhook)
