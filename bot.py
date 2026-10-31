@@ -56,6 +56,12 @@ def get_help_keyboard():
         ]
     )
 
+# ================= GLOBAL ERROR HANDLER =================
+@dp.errors()
+async def errors_handler(update: types.Update, exception: Exception):
+    print(f"⚠️ Bot Error: {exception}")
+    return True
+
 # ================= TELEGRAM HANDLERS =================
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
@@ -63,11 +69,9 @@ async def cmd_start(message: types.Message):
     ref = db.reference(f'users/{uid}')
     user_data = ref.get()
     
-    # ১. ব্যান চেক
     if user_data and user_data.get('banned', False):
         return await message.answer("⛔ **Your account is permanently banned.**\n**আপনার অ্যাকাউন্ট স্থায়ীভাবে ব্যান করা হয়েছে।**")
 
-    # ২. রেফারেল চেক
     args = message.text.split()
     if len(args) > 1 and args[1].startswith("ref_") and not user_data:
         referrer_id = args[1].replace("ref_", "")
@@ -80,7 +84,6 @@ async def cmd_start(message: types.Message):
                     await bot.send_message(referrer_id, "🎉 **New Referral! / নতুন রেফারেল!**\nYou earned $0.05 for inviting a friend. / বন্ধুকে ইনভাইট করার জন্য আপনি $0.05 পেয়েছেন।")
                 except: pass
 
-    # ৩. নতুন ইউজার ডাটাবেসে সেভ করা
     if not user_data:
         ref.set({
             "name": message.from_user.first_name,
@@ -116,60 +119,70 @@ async def cmd_admin(message: types.Message):
 
 @dp.message(F.text == "💰 Balance")
 async def btn_balance(message: types.Message):
-    user = db.reference(f'users/{message.from_user.id}').get()
-    # মাইনাস থাকলে ০ দেখাবে
-    bal = max(0, user.get('balance', 0.0)) if user else 0.0
-    
-    text = f"💰 **Total Balance / মোট ব্যালেন্স:** ${bal:.2f}"
-    await message.answer(text, parse_mode="Markdown")
+    try:
+        user = db.reference(f'users/{message.from_user.id}').get()
+        bal = max(0, float(user.get('balance', 0.0))) if user else 0.0
+        text = f"💰 **Total Balance / মোট ব্যালেন্স:** ${bal:.2f}"
+        await message.answer(text, parse_mode="Markdown")
+    except Exception as e:
+        await message.answer("⚠️ **Error loading balance.**\n**ব্যালেন্স লোড করতে সমস্যা হচ্ছে।**")
 
 @dp.message(F.text == "📜 History")
 async def btn_history(message: types.Message):
-    uid = str(message.from_user.id)
-    # ডাটাবেস থেকে ইউজারের উইথড্র রিকোয়েস্ট আনা
-    withdrawals = db.reference('withdrawals').order_by_child('userId').equal_to(uid).get() or {}
-    
-    if not withdrawals:
-        return await message.answer("📜 **No withdrawal history found.**\n**কোনো উইথড্র হিস্ট্রি পাওয়া যায়নি।**")
-    
-    # তারিখ অনুযায়ী সাজানো (নতুন আগে)
-    sorted_wds = sorted(withdrawals.values(), key=lambda x: x.get('date', ''), reverse=True)
-    
-    text = "📜 **Your Recent Withdrawals / আপনার সাম্প্রতিক উইথড্র:**\n\n"
-    
-    # সর্বোচ্চ ৫টি দেখাবে
-    for wd in sorted_wds[:5]:
-        if wd['status'] == 'pending':
-            status = "🟡 Pending"
-        elif wd['status'] == 'success':
-            status = "🟢 Success"
-        else:
-            status = "🔴 Rejected"
+    try:
+        uid = str(message.from_user.id)
+        withdrawals = db.reference('withdrawals').order_by_child('userId').equal_to(uid).get() or {}
+        
+        if not withdrawals:
+            return await message.answer("📜 **No withdrawal history found.**\n**কোনো উইথড্র হিস্ট্রি পাওয়া যায়নি।**")
+        
+        # ডাটা সেফটি: নিশ্চিত করা হলো withdrawals একটি ডিকশনারি
+        if not isinstance(withdrawals, dict):
+            return await message.answer("⚠️ **Invalid data format.**\n**ডাটা ফরম্যাটে সমস্যা আছে।**")
+
+        sorted_wds = sorted(withdrawals.values(), key=lambda x: str(x.get('date', '')), reverse=True)
+        
+        text = "📜 **Your Recent Withdrawals / আপনার সাম্প্রতিক উইথড্র:**\n\n"
+        
+        for wd in sorted_wds[:5]:
+            status_raw = str(wd.get('status', 'pending')).lower()
+            if status_raw == 'pending':
+                status = "🟡 Pending"
+            elif status_raw == 'success':
+                status = "🟢 Success"
+            else:
+                status = "🔴 Rejected"
+                
+            date_str = str(wd.get('date', ''))[:10] 
+            amount = float(wd.get('amount', 0))
+            method = str(wd.get('method', 'bKash')).capitalize()
             
-        date_str = wd.get('date', '')[:10] # শুধু তারিখটা নেবে
-        amount = wd.get('amount', 0)
-        method = wd.get('method', 'bKash').capitalize()
-        
-        text += f"💵 **${amount:.2f}** | {method}\n"
-        text += f"📌 Status: {status}\n"
-        text += f"📅 Date: {date_str}\n"
-        text += "───────────────\n"
-        
-    text += "\n👉 _To see all history, open the Web App._"
-    await message.answer(text, parse_mode="Markdown")
+            text += f"💵 **${amount:.2f}** | {method}\n"
+            text += f"📌 Status: {status}\n"
+            text += f"📅 Date: {date_str}\n"
+            text += "───────────────\n"
+            
+        text += "\n👉 _To see all history, open the Web App._"
+        await message.answer(text, parse_mode="Markdown")
+    except Exception as e:
+        print(f"History Error: {e}")
+        await message.answer("⚠️ **Error loading history. Please try again later.**\n**হিস্ট্রি লোড করতে সমস্যা হচ্ছে। আবার চেষ্টা করুন।**")
 
 @dp.message(F.text == "👥 Referrals")
 async def btn_referrals(message: types.Message):
-    uid = str(message.from_user.id)
-    ref_link = f"https://t.me/SMTaskNova_bot?start=ref_{uid}"
-    text = (
-        "👥 **Invite & Earn / ইনভাইট এবং আর্ন**\n\n"
-        "Share your link with friends and earn $0.05 for every new user!\n"
-        "আপনার বন্ধুদের সাথে লিংকটি শেয়ার করুন এবং প্রতিটি নতুন ইউজারের জন্য $0.05 আয় করুন!\n\n"
-        f"🔗 **Your Link / আপনার লিংক:**\n`{ref_link}`\n\n"
-        "_(Tap the link to copy / কপি করতে লিংকে ট্যাপ করুন)_"
-    )
-    await message.answer(text, parse_mode="Markdown")
+    try:
+        uid = str(message.from_user.id)
+        ref_link = f"https://t.me/SMTaskNova_bot?start=ref_{uid}"
+        text = (
+            "👥 **Invite & Earn / ইনভাইট এবং আর্ন**\n\n"
+            "Share your link with friends and earn $0.05 for every new user!\n"
+            "আপনার বন্ধুদের সাথে লিংকটি শেয়ার করুন এবং প্রতিটি নতুন ইউজারের জন্য $0.05 আয় করুন!\n\n"
+            f"🔗 **Your Link / আপনার লিংক:**\n`{ref_link}`\n\n"
+            "_(Tap the link to copy / কপি করতে লিংকে ট্যাপ করুন)_"
+        )
+        await message.answer(text, parse_mode="Markdown")
+    except Exception as e:
+        await message.answer("⚠️ **Error loading referral link.**")
 
 @dp.message(F.text == "💬 Help")
 async def btn_help(message: types.Message):
