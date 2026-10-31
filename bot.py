@@ -12,7 +12,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice, Pre
 from aiohttp import web
 
 # ================= CONFIGURATION =================
-BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM" # নতুন টোকেন
+BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM"
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 ADMIN_ID = "8021210361"
 PORT = int(os.environ.get("PORT", 8080))
@@ -120,7 +120,8 @@ async def add_reward(request):
     amt = float(data.get("amount", 0))
     ref = db.reference(f'users/{uid}')
     if ref.get():
-        ref.update({'balance': db.ServerValue.increment(amt)})
+        # ফায়ারবেসে টাকা যোগ করার সঠিক নিয়ম (Transaction)
+        ref.child('balance').transaction(lambda current: (current or 0) + amt)
     return web.json_response({"status": "success"})
 
 async def create_invoice(request):
@@ -147,10 +148,10 @@ async def submit_withdraw(request):
     user = ref.get()
     
     if user and user.get('balance', 0) >= amount:
-        ref.update({
-            'balance': db.ServerValue.increment(-amount),
-            'hold_balance': db.ServerValue.increment(amount)
-        })
+        # ব্যালেন্স কাটা এবং হোল্ডে যোগ করা
+        ref.child('balance').transaction(lambda current: (current or 0) - amount)
+        ref.child('hold_balance').transaction(lambda current: (current or 0) + amount)
+        
         wd_id = str(uuid.uuid4())[:8]
         db.reference(f'withdrawals/{wd_id}').set({
             "userId": uid, "name": user.get('name', 'User'),
@@ -181,17 +182,21 @@ async def admin_process_withdraw(request):
     wd_id, action = data.get("wdId"), data.get("action") 
     wd_ref = db.reference(f'withdrawals/{wd_id}')
     wd = wd_ref.get()
+    
     if not wd or wd.get('status') != 'pending':
         return web.json_response({"status": "error", "message": "Invalid request"})
+        
     uid, amount = wd['userId'], wd['amount']
     user_ref = db.reference(f'users/{uid}')
     
     if action == 'approve':
         wd_ref.update({'status': 'success'})
-        user_ref.update({'hold_balance': db.ServerValue.increment(-amount)})
+        user_ref.child('hold_balance').transaction(lambda current: (current or 0) - amount)
     else:
         wd_ref.update({'status': 'rejected'})
-        user_ref.update({'hold_balance': db.ServerValue.increment(-amount), 'balance': db.ServerValue.increment(amount)})
+        user_ref.child('hold_balance').transaction(lambda current: (current or 0) - amount)
+        user_ref.child('balance').transaction(lambda current: (current or 0) + amount)
+        
     return web.json_response({"status": "success"})
 
 async def admin_update_balance(request):
@@ -199,8 +204,10 @@ async def admin_update_balance(request):
     uid, amount, action = str(data.get("userId")), float(data.get("amount")), data.get("action") 
     ref = db.reference(f'users/{uid}')
     if ref.get():
-        if action == 'add': ref.update({'balance': db.ServerValue.increment(amount)})
-        else: ref.update({'balance': db.ServerValue.increment(-amount)})
+        if action == 'add': 
+            ref.child('balance').transaction(lambda current: (current or 0) + amount)
+        else: 
+            ref.child('balance').transaction(lambda current: (current or 0) - amount)
         return web.json_response({"status": "success"})
     return web.json_response({"status": "error", "message": "User not found"})
 
@@ -234,10 +241,11 @@ async def cpa_postback(request):
         user_data = ref.get()
         
         if user_data:
-            ref.update({'balance': db.ServerValue.increment(amount)})
+            # ফায়ারবেসে সঠিকভাবে টাকা যোগ করা
+            ref.child('balance').transaction(lambda current: (current or 0) + amount)
             return web.Response(text="OK", status=200)
         else:
-            return web.Response(text=f"❌ Error: User ID {uid} not found in Firebase Database. Please press /start in bot first.", status=404)
+            return web.Response(text=f"❌ Error: User ID {uid} not found in Firebase. Please press /start in bot first.", status=404)
             
     except Exception as e:
         return web.Response(text=f"❌ Firebase Error: {str(e)}", status=500)
@@ -267,7 +275,7 @@ async def start_web():
 
 async def main():
     await start_web()
-    # ⚠️ এই লাইনটি নতুন যোগ করা হয়েছে: বট চালু হওয়ার আগেই পুরোনো কানেকশন মুছে ফেলবে
+    # বট চালু হওয়ার আগেই পুরোনো কানেকশন মুছে ফেলবে (Conflict Error ফিক্স)
     await bot.delete_webhook(drop_pending_updates=True) 
     await dp.start_polling(bot)
 
