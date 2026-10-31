@@ -8,10 +8,7 @@ import firebase_admin
 from firebase_admin import credentials, db
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.types import (
-    ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, 
-    InlineKeyboardButton, LabeledPrice, PreCheckoutQuery, Message, WebAppInfo
-)
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice, PreCheckoutQuery, Message
 from aiohttp import web
 
 # ================= CONFIGURATION =================
@@ -47,13 +44,6 @@ def get_main_keyboard():
             [KeyboardButton(text="💰 Balance"), KeyboardButton(text="📜 History")],
             [KeyboardButton(text="👥 Referrals"), KeyboardButton(text="💬 Help")]
         ], resize_keyboard=True, is_persistent=True
-    )
-
-def get_webapp_keyboard():
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🚀 Open App / অ্যাপ ওপেন করুন", web_app=WebAppInfo(url=WEB_APP_URL))]
-        ]
     )
 
 def get_help_keyboard():
@@ -109,12 +99,11 @@ async def cmd_start(message: types.Message):
         welcome_text = (
             f"👑 **Welcome {message.from_user.first_name}**!\n"
             f"👑 **স্বাগতম {message.from_user.first_name}**!\n\n"
-            "👇 Click the button below to open the App.\n"
-            "👇 অ্যাপটি ওপেন করতে নিচের বাটনে ক্লিক করুন।"
+            "👇 Click the Menu Button (☰) to open App.\n"
+            "👇 অ্যাপটি ওপেন করতে নিচের মেনু বাটনে (☰) ক্লিক করুন।"
         )
         
         await message.answer(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
-        await message.answer("🚀 **Quick Access / দ্রুত প্রবেশ:**", reply_markup=get_webapp_keyboard(), parse_mode="Markdown")
     except Exception as e:
         print(f"Start Error: {e}")
 
