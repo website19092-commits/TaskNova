@@ -8,7 +8,10 @@ import firebase_admin
 from firebase_admin import credentials, db
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice, PreCheckoutQuery, Message
+from aiogram.types import (
+    ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, 
+    InlineKeyboardButton, LabeledPrice, PreCheckoutQuery, Message, WebAppInfo
+)
 from aiohttp import web
 
 # ================= CONFIGURATION =================
@@ -46,6 +49,13 @@ def get_main_keyboard():
         ], resize_keyboard=True, is_persistent=True
     )
 
+def get_webapp_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🚀 Open App / অ্যাপ ওপেন করুন", web_app=WebAppInfo(url=WEB_APP_URL))]
+        ]
+    )
+
 def get_help_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -65,43 +75,48 @@ async def errors_handler(update: types.Update, exception: Exception):
 # ================= TELEGRAM HANDLERS =================
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    uid = str(message.from_user.id)
-    ref = db.reference(f'users/{uid}')
-    user_data = ref.get()
-    
-    if user_data and user_data.get('banned', False):
-        return await message.answer("⛔ **Your account is permanently banned.**\n**আপনার অ্যাকাউন্ট স্থায়ীভাবে ব্যান করা হয়েছে।**")
-
-    args = message.text.split()
-    if len(args) > 1 and args[1].startswith("ref_") and not user_data:
-        referrer_id = args[1].replace("ref_", "")
-        if referrer_id != uid:
-            ref_ref = db.reference(f'users/{referrer_id}')
-            if ref_ref.get():
-                ref_ref.child('balance').transaction(lambda current: max(0, (current or 0)) + 0.05)
-                ref_ref.child('refs').transaction(lambda current: (current or 0) + 1)
-                try:
-                    await bot.send_message(referrer_id, "🎉 **New Referral! / নতুন রেফারেল!**\nYou earned $0.05 for inviting a friend. / বন্ধুকে ইনভাইট করার জন্য আপনি $0.05 পেয়েছেন।")
-                except: pass
-
-    if not user_data:
-        ref.set({
-            "name": message.from_user.first_name,
-            "balance": 0.0,
-            "hold_balance": 0.0,
-            "is_premium": False,
-            "refs": 0,
-            "joined_at": datetime.datetime.now().isoformat(),
-            "banned": False
-        })
+    try:
+        uid = str(message.from_user.id)
+        ref = db.reference(f'users/{uid}')
+        user_data = ref.get()
         
-    welcome_text = (
-        f"👑 **Welcome {message.from_user.first_name}**!\n"
-        f"👑 **স্বাগতম {message.from_user.first_name}**!\n\n"
-        "👇 Click the Menu Button (☰) to open App.\n"
-        "👇 অ্যাপটি ওপেন করতে নিচের মেনু বাটনে (☰) ক্লিক করুন।"
-    )
-    await message.answer(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
+        if user_data and user_data.get('banned', False):
+            return await message.answer("⛔ **Your account is permanently banned.**\n**আপনার অ্যাকাউন্ট স্থায়ীভাবে ব্যান করা হয়েছে।**")
+
+        args = message.text.split()
+        if len(args) > 1 and args[1].startswith("ref_") and not user_data:
+            referrer_id = args[1].replace("ref_", "")
+            if referrer_id != uid:
+                ref_ref = db.reference(f'users/{referrer_id}')
+                if ref_ref.get():
+                    ref_ref.child('balance').transaction(lambda current: max(0, (current or 0)) + 0.05)
+                    ref_ref.child('refs').transaction(lambda current: (current or 0) + 1)
+                    try:
+                        await bot.send_message(referrer_id, "🎉 **New Referral! / নতুন রেফারেল!**\nYou earned $0.05 for inviting a friend.")
+                    except: pass
+
+        if not user_data:
+            ref.set({
+                "name": message.from_user.first_name,
+                "balance": 0.0,
+                "hold_balance": 0.0,
+                "is_premium": False,
+                "refs": 0,
+                "joined_at": datetime.datetime.now().isoformat(),
+                "banned": False
+            })
+            
+        welcome_text = (
+            f"👑 **Welcome {message.from_user.first_name}**!\n"
+            f"👑 **স্বাগতম {message.from_user.first_name}**!\n\n"
+            "👇 Click the button below to open the App.\n"
+            "👇 অ্যাপটি ওপেন করতে নিচের বাটনে ক্লিক করুন।"
+        )
+        
+        await message.answer(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
+        await message.answer("🚀 **Quick Access / দ্রুত প্রবেশ:**", reply_markup=get_webapp_keyboard(), parse_mode="Markdown")
+    except Exception as e:
+        print(f"Start Error: {e}")
 
 @dp.message(Command("admin"))
 async def cmd_admin(message: types.Message):
@@ -117,7 +132,6 @@ async def cmd_admin(message: types.Message):
     )
     await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
 
-# কমান্ড এবং বাটন দুইটাই কাজ করবে
 @dp.message(Command("balance") | (F.text == "💰 Balance"))
 async def btn_balance(message: types.Message):
     try:
