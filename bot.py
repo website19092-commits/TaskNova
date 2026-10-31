@@ -60,10 +60,6 @@ def get_help_keyboard():
 @dp.errors()
 async def errors_handler(update: types.Update, exception: Exception):
     print(f"⚠️ Bot Error: {exception}")
-    try:
-        if update.message:
-            await update.message.answer("⚠️ **An internal error occurred. Please try again.**\n**একটি সমস্যা হয়েছে। আবার চেষ্টা করুন।**")
-    except: pass
     return True
 
 # ================= TELEGRAM HANDLERS =================
@@ -125,8 +121,8 @@ async def cmd_admin(message: types.Message):
     )
     await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
 
-# এখানে F.text.contains ব্যবহার করা হয়েছে যাতে ইমোজির জন্য বাটন কাজ না করার সমস্যা না হয়।
-@dp.message(Command("balance") | F.text.contains("Balance"))
+# ================= বাটন হ্যান্ডলার (শুধুমাত্র বাটনে ক্লিক করলে কাজ করবে) =================
+@dp.message(F.text.contains("Balance"))
 async def btn_balance(message: types.Message):
     try:
         user = db.reference(f'users/{message.from_user.id}').get()
@@ -134,10 +130,9 @@ async def btn_balance(message: types.Message):
         text = f"💰 **Total Balance / মোট ব্যালেন্স:** ${bal:.2f}"
         await message.answer(text, parse_mode="Markdown")
     except Exception as e:
-        print(f"Balance Error: {e}")
-        await message.answer("⚠️ **Error loading balance.**\n**ব্যালেন্স লোড করতে সমস্যা হচ্ছে।**")
+        await message.answer("⚠️ **Error loading balance.**")
 
-@dp.message(Command("history") | F.text.contains("History"))
+@dp.message(F.text.contains("History"))
 async def btn_history(message: types.Message):
     try:
         uid = str(message.from_user.id)
@@ -146,38 +141,23 @@ async def btn_history(message: types.Message):
         if not withdrawals:
             return await message.answer("📜 **No withdrawal history found.**\n**কোনো উইথড্র হিস্ট্রি পাওয়া যায়নি।**")
         
-        if not isinstance(withdrawals, dict):
-            return await message.answer("⚠️ **Invalid data format.**\n**ডাটা ফরম্যাটে সমস্যা আছে।**")
-
         sorted_wds = sorted(withdrawals.values(), key=lambda x: str(x.get('date', '')), reverse=True)
-        
         text = "📜 **Your Recent Withdrawals / আপনার সাম্প্রতিক উইথড্র:**\n\n"
         
         for wd in sorted_wds[:5]:
             status_raw = str(wd.get('status', 'pending')).lower()
-            if status_raw == 'pending':
-                status = "🟡 Pending"
-            elif status_raw == 'success':
-                status = "🟢 Success"
-            else:
-                status = "🔴 Rejected"
-                
+            status = "🟡 Pending" if status_raw == 'pending' else ("🟢 Success" if status_raw == 'success' else "🔴 Rejected")
             date_str = str(wd.get('date', ''))[:10] 
             amount = float(wd.get('amount', 0))
             method = str(wd.get('method', 'bKash')).capitalize()
             
-            text += f"💵 **${amount:.2f}** | {method}\n"
-            text += f"📌 Status: {status}\n"
-            text += f"📅 Date: {date_str}\n"
-            text += "───────────────\n"
+            text += f"💵 **${amount:.2f}** | {method}\n📌 Status: {status}\n📅 Date: {date_str}\n───────────────\n"
             
-        text += "\n👉 _To see all history, open the Web App._"
         await message.answer(text, parse_mode="Markdown")
     except Exception as e:
-        print(f"History Error: {e}")
-        await message.answer("⚠️ **Error loading history. Please try again later.**\n**হিস্ট্রি লোড করতে সমস্যা হচ্ছে। আবার চেষ্টা করুন।**")
+        await message.answer("⚠️ **Error loading history.**")
 
-@dp.message(Command("refer") | F.text.contains("Referrals"))
+@dp.message(F.text.contains("Referrals"))
 async def btn_referrals(message: types.Message):
     try:
         uid = str(message.from_user.id)
@@ -186,23 +166,22 @@ async def btn_referrals(message: types.Message):
             "👥 **Invite & Earn / ইনভাইট এবং আর্ন**\n\n"
             "Share your link with friends and earn $0.05 for every new user!\n"
             "আপনার বন্ধুদের সাথে লিংকটি শেয়ার করুন এবং প্রতিটি নতুন ইউজারের জন্য $0.05 আয় করুন!\n\n"
-            f"🔗 **Your Link / আপনার লিংক:**\n`{ref_link}`\n\n"
-            "_(Tap the link to copy / কপি করতে লিংকে ট্যাপ করুন)_"
+            f"🔗 **Your Link / আপনার লিংক:**\n`{ref_link}`"
         )
         await message.answer(text, parse_mode="Markdown")
     except Exception as e:
         await message.answer("⚠️ **Error loading referral link.**")
 
-@dp.message(Command("help") | F.text.contains("Help"))
+@dp.message(F.text.contains("Help"))
 async def btn_help(message: types.Message):
     text = (
         "💬 **Help & Support / হেল্প এবং সাপোর্ট**\n\n"
         "If you face any issues, please contact our support team below.\n"
         "যদি কোনো সমস্যা হয়, তবে নিচের সাপোর্ট টিমের সাথে যোগাযোগ করুন।\n\n"
         "⚠️ **Warning / সতর্কতা:**\n"
-        "Please do not disturb without any valid reason. Spamming will result in a ban.\n"
-        "বিনা কারণে ডিসটার্ব করবেন না। স্প্যামিং করলে ব্যান করা হবে।\n\n"
-        "👇 **Contact Options / যোগাযোগের মাধ্যম:**"
+        "Please do not disturb without any valid reason.\n"
+        "বিনা কারণে ডিসটার্ব করবেন না।\n\n"
+        "👇 **Contact Options:**"
     )
     await message.answer(text, reply_markup=get_help_keyboard(), parse_mode="Markdown")
 
@@ -217,7 +196,7 @@ async def success_payment_handler(message: Message):
     ref = db.reference(f'users/{uid}')
     if ref.get():
         ref.update({'is_premium': True})
-    await message.answer("🎉 **Premium Activated! / প্রিমিয়াম চালু হয়েছে!**\n\nThank you for your purchase.", parse_mode="Markdown")
+    await message.answer("🎉 **Premium Activated! / প্রিমিয়াম চালু হয়েছে!**", parse_mode="Markdown")
 
 # ================= API ENDPOINTS =================
 async def get_user(request):
@@ -225,7 +204,7 @@ async def get_user(request):
     user = db.reference(f'users/{user_id}').get()
     if user:
         if user.get('banned', False):
-            return web.json_response({"error": "banned", "message": "Account is banned"})
+            return web.json_response({"error": "banned"})
         return web.json_response({
             "balance": max(0, user.get('balance', 0.0)),
             "is_premium": user.get('is_premium', False)
