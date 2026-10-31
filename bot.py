@@ -12,7 +12,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice, Pre
 from aiohttp import web
 
 # ================= CONFIGURATION =================
-BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM" 
+BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM" # নতুন টোকেন
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 ADMIN_ID = "8021210361"
 PORT = int(os.environ.get("PORT", 8080))
@@ -222,7 +222,6 @@ async def cpa_postback(request):
     amount_str = request.query.get("amount")
     secret = request.query.get("secret")
     
-    # সিকিউরিটি চেক
     if secret != POSTBACK_SECRET:
         return web.Response(text="❌ Error: Invalid Secret Key!", status=403)
         
@@ -235,15 +234,12 @@ async def cpa_postback(request):
         user_data = ref.get()
         
         if user_data:
-            # ইউজার থাকলে টাকা অ্যাড হবে
             ref.update({'balance': db.ServerValue.increment(amount)})
             return web.Response(text="OK", status=200)
         else:
-            # ইউজার না থাকলে এরর মেসেজ দেখাবে
             return web.Response(text=f"❌ Error: User ID {uid} not found in Firebase Database. Please press /start in bot first.", status=404)
             
     except Exception as e:
-        # আসল এররটা ব্রাউজারে দেখাবে
         return web.Response(text=f"❌ Firebase Error: {str(e)}", status=500)
 
 async def ping(request): return web.Response(text="SM TaskNova Bot is running!")
@@ -271,6 +267,8 @@ async def start_web():
 
 async def main():
     await start_web()
+    # ⚠️ এই লাইনটি নতুন যোগ করা হয়েছে: বট চালু হওয়ার আগেই পুরোনো কানেকশন মুছে ফেলবে
+    await bot.delete_webhook(drop_pending_updates=True) 
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
