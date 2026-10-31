@@ -8,9 +8,10 @@ import firebase_admin
 from firebase_admin import credentials, db
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice, PreCheckoutQuery, Message
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice, PreCheckoutQuery, Message
 from aiohttp import web
 
+# ================= CONFIGURATION =================
 BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM"
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 ADMIN_ID = "8021210361"
@@ -24,6 +25,7 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# ================= FIREBASE SETUP =================
 try:
     cred_json = os.environ.get("FIREBASE_CREDENTIALS")
     if cred_json:
@@ -35,23 +37,37 @@ try:
 except Exception as e:
     print(f"❌ Firebase Setup Error: {e}")
 
+# ================= KEYBOARDS =================
 def get_main_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="💰 Balance"), KeyboardButton(text="👥 Referrals")],
-            [KeyboardButton(text="⚙️ Settings"), KeyboardButton(text="💬 Help")]
+            [KeyboardButton(text="💰 Balance"), KeyboardButton(text="📜 History")],
+            [KeyboardButton(text="👥 Referrals"), KeyboardButton(text="💬 Help")]
         ], resize_keyboard=True, is_persistent=True
     )
 
+def get_help_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="📢 Telegram Support", url="https://t.me/SM_Shakib_Hasan"),
+                InlineKeyboardButton(text="💬 WhatsApp Support", url="https://wa.me/880179136670")
+            ]
+        ]
+    )
+
+# ================= TELEGRAM HANDLERS =================
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     uid = str(message.from_user.id)
     ref = db.reference(f'users/{uid}')
     user_data = ref.get()
     
+    # ১. ব্যান চেক
     if user_data and user_data.get('banned', False):
-        return await message.answer("⛔ **Your account is permanently banned.**")
+        return await message.answer("⛔ **Your account is permanently banned.**\n**আপনার অ্যাকাউন্ট স্থায়ীভাবে ব্যান করা হয়েছে।**")
 
+    # ২. রেফারেল চেক
     args = message.text.split()
     if len(args) > 1 and args[1].startswith("ref_") and not user_data:
         referrer_id = args[1].replace("ref_", "")
@@ -61,9 +77,10 @@ async def cmd_start(message: types.Message):
                 ref_ref.child('balance').transaction(lambda current: max(0, (current or 0)) + 0.05)
                 ref_ref.child('refs').transaction(lambda current: (current or 0) + 1)
                 try:
-                    await bot.send_message(referrer_id, "🎉 **New Referral!**\nYou earned $0.05 for inviting a friend.")
+                    await bot.send_message(referrer_id, "🎉 **New Referral! / নতুন রেফারেল!**\nYou earned $0.05 for inviting a friend. / বন্ধুকে ইনভাইট করার জন্য আপনি $0.05 পেয়েছেন।")
                 except: pass
 
+    # ৩. নতুন ইউজার ডাটাবেসে সেভ করা
     if not user_data:
         ref.set({
             "name": message.from_user.first_name,
@@ -75,15 +92,18 @@ async def cmd_start(message: types.Message):
             "banned": False
         })
         
-    await message.answer(
-        f"👑 **Welcome {message.from_user.first_name}**!\n👑 **স্বাগতম!**\n\n👇 Click the Menu Button (☰) to open App.",
-        reply_markup=get_main_keyboard(), parse_mode="Markdown"
+    welcome_text = (
+        f"👑 **Welcome {message.from_user.first_name}**!\n"
+        f"👑 **স্বাগতম {message.from_user.first_name}**!\n\n"
+        "👇 Click the Menu Button (☰) to open App.\n"
+        "👇 অ্যাপটি ওপেন করতে নিচের মেনু বাটনে (☰) ক্লিক করুন।"
     )
+    await message.answer(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
 
 @dp.message(Command("admin"))
 async def cmd_admin(message: types.Message):
     if str(message.from_user.id) != ADMIN_ID: 
-        return await message.answer("⛔ Access Denied. You are not the admin.")
+        return await message.answer("⛔ Access Denied. You are not the admin.\n**আপনি অ্যাডমিন নন।**")
     
     admin_link = f"{WEB_APP_URL}admin.html"
     text = (
@@ -97,35 +117,74 @@ async def cmd_admin(message: types.Message):
 @dp.message(F.text == "💰 Balance")
 async def btn_balance(message: types.Message):
     user = db.reference(f'users/{message.from_user.id}').get()
+    # মাইনাস থাকলে ০ দেখাবে
     bal = max(0, user.get('balance', 0.0)) if user else 0.0
-    hold = f"{user.get('hold_balance', 0.0):.2f}" if user else "0.00"
-    await message.answer(f"💰 **Balance:** ${bal:.2f}\n⏳ **Hold:** ${hold}", parse_mode="Markdown")
+    
+    text = f"💰 **Total Balance / মোট ব্যালেন্স:** ${bal:.2f}"
+    await message.answer(text, parse_mode="Markdown")
+
+@dp.message(F.text == "📜 History")
+async def btn_history(message: types.Message):
+    uid = str(message.from_user.id)
+    # ডাটাবেস থেকে ইউজারের উইথড্র রিকোয়েস্ট আনা
+    withdrawals = db.reference('withdrawals').order_by_child('userId').equal_to(uid).get() or {}
+    
+    if not withdrawals:
+        return await message.answer("📜 **No withdrawal history found.**\n**কোনো উইথড্র হিস্ট্রি পাওয়া যায়নি।**")
+    
+    # তারিখ অনুযায়ী সাজানো (নতুন আগে)
+    sorted_wds = sorted(withdrawals.values(), key=lambda x: x.get('date', ''), reverse=True)
+    
+    text = "📜 **Your Recent Withdrawals / আপনার সাম্প্রতিক উইথড্র:**\n\n"
+    
+    # সর্বোচ্চ ৫টি দেখাবে
+    for wd in sorted_wds[:5]:
+        if wd['status'] == 'pending':
+            status = "🟡 Pending"
+        elif wd['status'] == 'success':
+            status = "🟢 Success"
+        else:
+            status = "🔴 Rejected"
+            
+        date_str = wd.get('date', '')[:10] # শুধু তারিখটা নেবে
+        amount = wd.get('amount', 0)
+        method = wd.get('method', 'bKash').capitalize()
+        
+        text += f"💵 **${amount:.2f}** | {method}\n"
+        text += f"📌 Status: {status}\n"
+        text += f"📅 Date: {date_str}\n"
+        text += "───────────────\n"
+        
+    text += "\n👉 _To see all history, open the Web App._"
+    await message.answer(text, parse_mode="Markdown")
 
 @dp.message(F.text == "👥 Referrals")
 async def btn_referrals(message: types.Message):
     uid = str(message.from_user.id)
     ref_link = f"https://t.me/SMTaskNova_bot?start=ref_{uid}"
     text = (
-        "👥 **Invite & Earn**\n\n"
-        "Share your link with friends and earn $0.05 for every new user!\n\n"
-        f"🔗 **Your Link:**\n`{ref_link}`\n\n"
-        "_(Tap the link to copy)_"
+        "👥 **Invite & Earn / ইনভাইট এবং আর্ন**\n\n"
+        "Share your link with friends and earn $0.05 for every new user!\n"
+        "আপনার বন্ধুদের সাথে লিংকটি শেয়ার করুন এবং প্রতিটি নতুন ইউজারের জন্য $0.05 আয় করুন!\n\n"
+        f"🔗 **Your Link / আপনার লিংক:**\n`{ref_link}`\n\n"
+        "_(Tap the link to copy / কপি করতে লিংকে ট্যাপ করুন)_"
     )
     await message.answer(text, parse_mode="Markdown")
-
-@dp.message(F.text == "⚙️ Settings")
-async def btn_settings(message: types.Message):
-    await message.answer("⚙️ **Settings**\n\nLanguage and other settings are coming soon!")
 
 @dp.message(F.text == "💬 Help")
 async def btn_help(message: types.Message):
     text = (
-        "💬 **Help & Support**\n\n"
-        "If you face any issues, please contact our support team:\n\n"
-        "👉 @SM_Shakib_Hasan"
+        "💬 **Help & Support / হেল্প এবং সাপোর্ট**\n\n"
+        "If you face any issues, please contact our support team below.\n"
+        "যদি কোনো সমস্যা হয়, তবে নিচের সাপোর্ট টিমের সাথে যোগাযোগ করুন।\n\n"
+        "⚠️ **Warning / সতর্কতা:**\n"
+        "Please do not disturb without any valid reason. Spamming will result in a ban.\n"
+        "বিনা কারণে ডিসটার্ব করবেন না। স্প্যামিং করলে ব্যান করা হবে।\n\n"
+        "👇 **Contact Options / যোগাযোগের মাধ্যম:**"
     )
-    await message.answer(text, parse_mode="Markdown")
+    await message.answer(text, reply_markup=get_help_keyboard(), parse_mode="Markdown")
 
+# ================= PREMIUM (TELEGRAM STARS) =================
 @dp.pre_checkout_query()
 async def pre_checkout_handler(pre_checkout_query: PreCheckoutQuery):
     await pre_checkout_query.answer(ok=True)
@@ -136,8 +195,9 @@ async def success_payment_handler(message: Message):
     ref = db.reference(f'users/{uid}')
     if ref.get():
         ref.update({'is_premium': True})
-    await message.answer("🎉 **Premium Activated!**\n\nThank you for your purchase.", parse_mode="Markdown")
+    await message.answer("🎉 **Premium Activated! / প্রিমিয়াম চালু হয়েছে!**\n\nThank you for your purchase.", parse_mode="Markdown")
 
+# ================= API ENDPOINTS =================
 async def get_user(request):
     user_id = request.query.get("userId")
     user = db.reference(f'users/{user_id}').get()
@@ -169,6 +229,7 @@ async def create_invoice(request):
     )
     return web.json_response({"invoiceLink": invoice_link})
 
+# ================= WITHDRAW SYSTEM =================
 async def submit_withdraw(request):
     data = await request.json()
     uid = str(data.get("userId"))
@@ -198,6 +259,7 @@ async def get_user_withdrawals(request):
     result.sort(key=lambda x: x.get('date', ''), reverse=True)
     return web.json_response(result)
 
+# ================= ADMIN API =================
 async def admin_get_users(request):
     users = db.reference('users').get() or {}
     return web.json_response([dict(v, id=k) for k, v in users.items()])
@@ -284,6 +346,7 @@ async def admin_send_message(request):
     except Exception as e:
         return web.json_response({"status": "error", "message": str(e)})
 
+# ================= POSTBACK (CPAGrip/Monetag) =================
 async def cpa_postback(request):
     uid = request.query.get("user_id")
     amount_str = request.query.get("amount")
@@ -307,6 +370,7 @@ async def cpa_postback(request):
 
 async def ping(request): return web.Response(text="SM TaskNova Bot is running!")
 
+# ================= CORS MIDDLEWARE =================
 @web.middleware
 async def cors_middleware(request, handler):
     if request.method == "OPTIONS":
@@ -318,6 +382,7 @@ async def cors_middleware(request, handler):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     return response
 
+# ================= WEBHOOK SETUP =================
 async def on_startup(app):
     webhook_url = f"{RENDER_URL}/webhook"
     await bot.set_webhook(webhook_url, drop_pending_updates=True)
@@ -333,6 +398,7 @@ async def handle_webhook(request):
     await dp.feed_update(bot, update)
     return web.Response(text="OK")
 
+# ================= APP START =================
 async def start_web():
     app = web.Application(middlewares=[cors_middleware])
     app.router.add_post('/webhook', handle_webhook)
