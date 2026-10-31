@@ -16,7 +16,7 @@ BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM"
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 ADMIN_ID = "8021210361"
 PORT = int(os.environ.get("PORT", 8080))
-RENDER_URL = "https://tasknova-6mjt.onrender.com" # আপনার রেন্ডার লিংক
+RENDER_URL = "https://tasknova-6mjt.onrender.com"
 FIREBASE_URL = "https://tasknova-19cf2-default-rtdb.firebaseio.com/"
 
 POSTBACK_SECRET = "TaskNovaSecret123" 
@@ -250,20 +250,30 @@ async def cpa_postback(request):
 
 async def ping(request): return web.Response(text="SM TaskNova Bot is running!")
 
-# ================= WEBHOOK SETUP (Polling এর বদলে) =================
+# ================= CORS MIDDLEWARE (নতুন যোগ করা হয়েছে) =================
+@web.middleware
+async def cors_middleware(request, handler):
+    if request.method == "OPTIONS":
+        response = web.Response()
+    else:
+        response = await handler(request)
+    
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
+# ================= WEBHOOK SETUP =================
 async def on_startup(app):
-    # বট চালু হওয়ার সময় ওয়েবহুক সেট করা
     webhook_url = f"{RENDER_URL}/webhook"
     await bot.set_webhook(webhook_url, drop_pending_updates=True)
     print(f"✅ Webhook set to {webhook_url}")
 
 async def on_shutdown(app):
-    # বট বন্ধ হওয়ার সময় ওয়েবহুক ডিলিট করা
     await bot.delete_webhook()
     print("❌ Webhook deleted")
 
 async def handle_webhook(request):
-    # টেলিগ্রাম থেকে আসা আপডেট প্রসেস করা
     data = await request.json()
     update = types.Update(**data)
     await dp.feed_update(bot, update)
@@ -271,12 +281,10 @@ async def handle_webhook(request):
 
 # ================= APP START =================
 async def start_web():
-    app = web.Application()
+    # এখানে middleware যুক্ত করা হয়েছে
+    app = web.Application(middlewares=[cors_middleware])
     
-    # Webhook রুট
     app.router.add_post('/webhook', handle_webhook)
-    
-    # API রুটগুলো
     app.router.add_get('/', ping)
     app.router.add_get('/api/user', get_user)
     app.router.add_post('/api/reward', add_reward)
@@ -290,7 +298,6 @@ async def start_web():
     app.router.add_post('/api/admin/update-balance', admin_update_balance)
     app.router.add_post('/api/admin/broadcast', admin_broadcast)
     
-    # Startup/Shutdown ইভেন্ট
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
     
@@ -302,9 +309,7 @@ async def start_web():
 
 async def main():
     await start_web()
-    # Polling এর বদলে webhook ব্যবহার করা হচ্ছে, তাই এখানে polling থাকবে না
-    # Webhook সার্ভার aiohttp এর মাধ্যমে চলবে
-    await asyncio.Event().wait() # সার্ভার চালু রাখার জন্য
+    await asyncio.Event().wait()
 
 if __name__ == "__main__":
     asyncio.run(main())
