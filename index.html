@@ -40,7 +40,6 @@
         .balance-card h3 { font-size: 14px; font-weight: 400; opacity: 0.9; margin-bottom: 5px; }
         .balance-card h1 { font-size: 42px; font-weight: 700; margin-bottom: 5px; }
         
-        /* রিফ্রেশ বাটন */
         .refresh-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); border: none; color: #fff; width: 35px; height: 35px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.3s; }
         .refresh-btn:active { transform: rotate(180deg); background: rgba(255,255,255,0.4); }
 
@@ -52,7 +51,6 @@
         .action-card h4 { font-size: 14px; font-weight: 600; }
         .action-card p { font-size: 11px; color: #aaa; margin-top: 5px; }
         
-        /* টাইমার টেক্সট স্টাইল */
         #luckyBoxTimerText { color: #ff4f4f; font-weight: bold; font-size: 11px; margin-top: 5px; white-space: nowrap;}
         #adLimitText { color: #0088cc; font-weight: bold; font-size: 11px; margin-top: 5px; }
         #adTimerText { color: #ff4f4f; font-weight: bold; font-size: 10px; margin-top: 3px; display: none; white-space: nowrap;}
@@ -176,10 +174,8 @@
         .btn-red { padding: 6px 10px; border-radius: 6px; border: none; background: #ff4f4f20; color: #ff4f4f; font-weight: bold; font-size: 11px; cursor: pointer;}
         .admin-input { width: 100%; padding: 12px; background: #121212; border: 1px solid #444; border-radius: 10px; color: #fff; margin-bottom: 10px; }
 
-        /* কাস্টম টোস্ট (পপ-আপ) */
         #customToast { position: fixed; bottom: 100px; left: 50%; transform: translate(-50%, 20px); background: #0088cc; color: #fff; padding: 15px 25px; border-radius: 10px; font-size: 14px; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: 0.3s; z-index: 99999; text-align: center; width: max-content; max-width: 90%; }
 
-        /* ================= প্রিমিয়াম পপ-আপ মডাল ================= */
         #premiumModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px); }
         .premium-content { background: linear-gradient(145deg, #1e1e24, #121212); border: 2px solid #f39c12; border-radius: 20px; width: 100%; max-width: 400px; padding: 25px; text-align: center; box-shadow: 0 0 30px rgba(243, 156, 18, 0.3); }
         .premium-content h3 { color: #f39c12; margin-bottom: 15px; font-size: 22px; text-shadow: 0 0 10px rgba(243, 156, 18, 0.5);}
@@ -221,7 +217,6 @@
             </div>
 
             <div class="grid-container">
-                <!-- Watch Ad -->
                 <div class="action-card" onclick="watchAd()" id="adBtn">
                     <i class="fa-solid fa-circle-play"></i>
                     <h4>Watch & Earn</h4>
@@ -229,7 +224,6 @@
                     <p id="adTimerText">Wait: 24h 00m</p>
                 </div>
                 
-                <!-- Daily Bonus -->
                 <div class="action-card" onclick="openLuckyBox()" id="luckyBoxBtn" style="border-color: #f39c12;">
                     <i class="fa-solid fa-gift" style="color: #f39c12; animation: pulse 1.5s infinite;"></i>
                     <h4>Daily Bonus</h4>
@@ -243,7 +237,6 @@
                     <h4>Micro Tasks</h4>
                     <p>Do tasks, earn big</p>
                 </div>
-                <!-- Referrals -->
                 <div class="action-card" onclick="openReferralModal()">
                     <i class="fa-solid fa-users"></i>
                     <h4>Referrals</h4>
@@ -251,7 +244,6 @@
                 </div>
             </div>
 
-            <!-- Premium Banner -->
             <div class="premium-banner" id="premiumBanner" onclick="buyPremium()">
                 <div>
                     <h4><i class="fa-solid fa-crown"></i> Go Premium</h4>
@@ -266,7 +258,6 @@
             <h2 style="margin-bottom: 15px;"><i class="fa-solid fa-list-check"></i> Micro Tasks</h2>
             <p style="color: #888; font-size: 12px; margin-bottom: 15px;">Complete easy tasks and earn real money instantly!</p>
             
-            <!-- স্মার্টলিংক (১) -->
             <div class="task-card" style="border-color: #f39c12;">
                 <div class="task-icon" style="background: rgba(243, 156, 18, 0.1); color: #f39c12;"><i class="fa-solid fa-bolt"></i></div>
                 <div class="task-details">
@@ -279,7 +270,6 @@
                 </div>
             </div>
 
-            <!-- অফার ২ -->
             <div class="task-card">
                 <div class="task-icon"><i class="fa-solid fa-box-open"></i></div>
                 <div class="task-details">
@@ -292,7 +282,6 @@
                 </div>
             </div>
 
-            <!-- অফার ৩ -->
             <div class="task-card">
                 <div class="task-icon"><i class="fa-solid fa-gamepad"></i></div>
                 <div class="task-details">
@@ -305,7 +294,6 @@
                 </div>
             </div>
 
-            <!-- অফার ৪ -->
             <div class="task-card">
                 <div class="task-icon"><i class="fa-solid fa-comments"></i></div>
                 <div class="task-details">
@@ -318,7 +306,6 @@
                 </div>
             </div>
 
-            <!-- অফার ৫ -->
             <div class="task-card">
                 <div class="task-icon"><i class="fa-solid fa-money-bill-trend-up"></i></div>
                 <div class="task-details">
@@ -331,7 +318,6 @@
                 </div>
             </div>
 
-            <!-- অফার ৬ -->
             <div class="task-card">
                 <div class="task-icon"><i class="fa-solid fa-gem"></i></div>
                 <div class="task-details">
@@ -344,7 +330,6 @@
                 </div>
             </div>
 
-            <!-- অফার ৭ -->
             <div class="task-card">
                 <div class="task-icon"><i class="fa-solid fa-star"></i></div>
                 <div class="task-details">
@@ -357,7 +342,6 @@
                 </div>
             </div>
 
-            <!-- অফার ৮ (Monetag Direct Link) -->
             <div class="task-card" style="border-color: #26a17b;">
                 <div class="task-icon" style="background: rgba(38, 161, 123, 0.1); color: #26a17b;"><i class="fa-solid fa-hand-holding-dollar"></i></div>
                 <div class="task-details">
@@ -404,7 +388,6 @@
                 <i class="fa-solid fa-triangle-exclamation"></i> USDT Withdraw Coming Soon! 🚀
             </div>
 
-            <!-- Withdraw History Section -->
             <div class="history-card">
                 <h4><i class="fa-solid fa-clock-rotate-left"></i> Withdraw History</h4>
                 <div id="withdrawHistoryList">
@@ -569,7 +552,8 @@
         const REWARD_PER_AD = 0.02; 
         let adTimerInterval = null;
 
-        const isAdminMode = window.location.hash === "#admin";
+        // এখানে ?admin=1 চেক করা হচ্ছে
+        const isAdminMode = new URLSearchParams(window.location.search).get('admin') === '1';
 
         window.addEventListener('load', () => {
             setTimeout(() => {
@@ -753,7 +737,6 @@
         function checkAdLimit() {
             if (!user) return 0;
             
-            // এখানে ইউজার আইডি যুক্ত করা হয়েছে
             let adLimitStartTime = localStorage.getItem('adLimitStartTime_' + user.id);
             let adsWatched = parseInt(localStorage.getItem('adsWatched_' + user.id) || '0');
             let now = Date.now();
@@ -1154,4 +1137,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
