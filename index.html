@@ -548,12 +548,21 @@
         const ADMIN_ID = "8021210361";
         let user = tg.initDataUnsafe?.user;
 
+        // যদি টেলিগ্রাম থেকে ইউজার ডাটা সরাসরি না আসে, তবে initData থেকে পার্স করে নিবে (অ্যাডমিন প্যানেলের জন্য জরুরি)
+        if (!user && tg.initData) {
+            try {
+                const params = new URLSearchParams(tg.initData);
+                const userStr = params.get('user');
+                if (userStr) user = JSON.parse(userStr);
+            } catch (e) { console.error("Error parsing initData", e); }
+        }
+
         const DAILY_AD_LIMIT = 10;
         const REWARD_PER_AD = 0.02; 
         let adTimerInterval = null;
 
-        // এখানে ?admin=1 চেক করা হচ্ছে
-        const isAdminMode = new URLSearchParams(window.location.search).get('admin') === '1';
+        // অ্যাডমিন মোড চেক (URL-এ admin=1 থাকলে)
+        const isAdminMode = window.location.href.includes('admin=1') || new URLSearchParams(window.location.search).get('admin') === '1';
 
         window.addEventListener('load', () => {
             setTimeout(() => {
@@ -567,8 +576,7 @@
                             loadAdminUsers();
                             loadAdminWithdrawals();
                         } else {
-                            showAlert("⛔ Access Denied.");
-                            setTimeout(() => tg.close(), 1500);
+                            showAlert("⛔ Access Denied. You are not logged in or not the admin.");
                         }
                     } else {
                         document.getElementById('mainApp').style.display = 'block';
@@ -582,14 +590,6 @@
         });
 
         function initUser() {
-            if (!user && tg.initData) {
-                try {
-                    const params = new URLSearchParams(tg.initData);
-                    const userStr = params.get('user');
-                    if (userStr) user = JSON.parse(userStr);
-                } catch (e) {}
-            }
-
             if (user) {
                 document.getElementById('userName').innerText = user.first_name;
                 document.getElementById('userId').innerText = user.id;
@@ -1137,4 +1137,4 @@
         }
     </script>
 </body>
-    </html>
+</html>
