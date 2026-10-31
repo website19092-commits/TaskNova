@@ -50,14 +50,20 @@ def get_main_keyboard():
 async def cmd_start(message: types.Message):
     uid = str(message.from_user.id)
     ref = db.reference(f'users/{uid}')
-    if not ref.get():
+    user_data = ref.get()
+    
+    if user_data and user_data.get('banned', False):
+        return await message.answer("⛔ **Your account is permanently banned.**")
+
+    if not user_data:
         ref.set({
             "name": message.from_user.first_name,
             "balance": 0.0,
             "hold_balance": 0.0,
             "is_premium": False,
             "refs": 0,
-            "joined_at": datetime.datetime.now().isoformat()
+            "joined_at": datetime.datetime.now().isoformat(),
+            "banned": False
         })
         
     await message.answer(
@@ -70,8 +76,7 @@ async def cmd_admin(message: types.Message):
     if str(message.from_user.id) != ADMIN_ID: 
         return await message.answer("⛔ Access Denied. You are not the admin.")
     
-    # এখানে #admin এর পরিবর্তে ?admin=1 করা হয়েছে
-    admin_link = f"{WEB_APP_URL}?admin=1"
+    admin_link = f"{WEB_APP_URL}admin.html"
     
     text = (
         "👑 **𝗦𝗠. 𝗧𝗮𝘀𝗸𝗡𝗼𝘃𝗮 - 𝗣𝗿𝗲𝗺𝗶𝘂𝗺 𝗔𝗱𝗺𝗶𝗻**\n\n"
@@ -110,6 +115,8 @@ async def get_user(request):
     user_id = request.query.get("userId")
     user = db.reference(f'users/{user_id}').get()
     if user:
+        if user.get('banned', False):
+            return web.json_response({"error": "banned", "message": "Account is banned"})
         return web.json_response({
             "balance": user.get('balance', 0.0),
             "is_premium": user.get('is_premium', False)
@@ -207,21 +214,65 @@ async def admin_update_balance(request):
         if action == 'add': 
             ref.child('balance').transaction(lambda current: (current or 0) + amount)
         else: 
-            ref.child('balance').transaction(lambda current: (current or 0) - amount)
+            ref.child('balance').transaction(lambda current: max(0, (current or 0) - amount))
         return web.json_response({"status": "success"})
     return web.json_response({"status": "error", "message": "User not found"})
+
+# নতুন: ইউজার ব্যান ও আনব্যান
+async def admin_ban_user(request):
+    data = await request.json()
+    uid = str(data.get("userId"))
+    action = data.get("action") # 'ban' or 'unban'
+    
+    ref = db.reference(f'users/{uid}')
+    if ref.get():
+        ref.update({'banned': (action == 'ban')})
+        return web.json_response({"status": "success"})
+    return web.json_response({"status": "error", "message": "User not found"})
+
+# নতুন: ইউজার ডিলিট
+async def admin_delete_user(request):
+    data = await request.json()
+    uid = str(data.get("userId"))
+    
+    try:
+        # ইউজার ডিলিট
+        db.reference(f'users/{uid}').delete()
+        # ওই ইউজারের সব উইথড্র রিকোয়েস্ট ডিলিট
+        wds = db.reference('withdrawals').order_by_child('userId').equal_to(uid).get() or {}
+        for wd_id in wds.keys():
+            db.reference(f'withdrawals/{wd_id}').delete()
+            
+        return web.json_response({"status": "success"})
+    except Exception as e:
+        return web.json_response({"status": "error", "message": str(e)})
 
 async def admin_broadcast(request):
     data = await request.json()
     users = db.reference('users').get() or {}
     success = 0
-    for uid in users.keys():
+    for uid, u_data in users.items():
+        if u_data.get('banned', False): continue # ব্যানড ইউজারদের মেসেজ যাবে না
         try:
             await bot.send_message(chat_id=uid, text=data.get("text"), parse_mode="Markdown")
             success += 1
             await asyncio.sleep(0.05)
         except: pass
     return web.json_response({"status": "success", "sent": success})
+
+async def admin_send_message(request):
+    data = await request.json()
+    uid = str(data.get("userId"))
+    text = data.get("text")
+    
+    if not uid or not text:
+        return web.json_response({"status": "error", "message": "Missing data"})
+        
+    try:
+        await bot.send_message(chat_id=uid, text=text, parse_mode="Markdown")
+        return web.json_response({"status": "success"})
+    except Exception as e:
+        return web.json_response({"status": "error", "message": str(e)})
 
 # ================= POSTBACK (CPAGrip/Monetag) =================
 async def cpa_postback(request):
@@ -240,11 +291,11 @@ async def cpa_postback(request):
         ref = db.reference(f'users/{uid}')
         user_data = ref.get()
         
-        if user_data:
+        if user_data and not user_data.get('banned', False):
             ref.child('balance').transaction(lambda current: (current or 0) + amount)
             return web.Response(text="OK", status=200)
         else:
-            return web.Response(text=f"❌ Error: User ID {uid} not found in Firebase. Please press /start in bot first.", status=404)
+            return web.Response(text=f"❌ Error: User not found or banned.", status=404)
             
     except Exception as e:
         return web.Response(text=f"❌ Firebase Error: {str(e)}", status=500)
@@ -292,11 +343,16 @@ async def start_web():
     app.router.add_post('/api/withdraw', submit_withdraw)
     app.router.add_get('/api/user/withdrawals', get_user_withdrawals)
     app.router.add_get('/api/postback', cpa_postback)
+    
+    # Admin Routes
     app.router.add_get('/api/admin/users', admin_get_users)
     app.router.add_get('/api/admin/withdrawals', admin_get_withdrawals)
     app.router.add_post('/api/admin/process-withdraw', admin_process_withdraw)
     app.router.add_post('/api/admin/update-balance', admin_update_balance)
+    app.router.add_post('/api/admin/ban-user', admin_ban_user) # নতুন
+    app.router.add_post('/api/admin/delete-user', admin_delete_user) # নতুন
     app.router.add_post('/api/admin/broadcast', admin_broadcast)
+    app.router.add_post('/api/admin/send-message', admin_send_message)
     
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
