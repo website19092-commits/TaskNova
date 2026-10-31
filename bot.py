@@ -16,6 +16,7 @@ BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM"
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 ADMIN_ID = "8021210361"
 PORT = int(os.environ.get("PORT", 8080))
+RENDER_URL = "https://tasknova-6mjt.onrender.com" # আপনার রেন্ডার লিংক
 FIREBASE_URL = "https://tasknova-19cf2-default-rtdb.firebaseio.com/"
 
 POSTBACK_SECRET = "TaskNovaSecret123" 
@@ -120,7 +121,6 @@ async def add_reward(request):
     amt = float(data.get("amount", 0))
     ref = db.reference(f'users/{uid}')
     if ref.get():
-        # ফায়ারবেসে টাকা যোগ করার সঠিক নিয়ম (Transaction)
         ref.child('balance').transaction(lambda current: (current or 0) + amt)
     return web.json_response({"status": "success"})
 
@@ -148,7 +148,6 @@ async def submit_withdraw(request):
     user = ref.get()
     
     if user and user.get('balance', 0) >= amount:
-        # ব্যালেন্স কাটা এবং হোল্ডে যোগ করা
         ref.child('balance').transaction(lambda current: (current or 0) - amount)
         ref.child('hold_balance').transaction(lambda current: (current or 0) + amount)
         
@@ -241,7 +240,6 @@ async def cpa_postback(request):
         user_data = ref.get()
         
         if user_data:
-            # ফায়ারবেসে সঠিকভাবে টাকা যোগ করা
             ref.child('balance').transaction(lambda current: (current or 0) + amount)
             return web.Response(text="OK", status=200)
         else:
@@ -252,9 +250,33 @@ async def cpa_postback(request):
 
 async def ping(request): return web.Response(text="SM TaskNova Bot is running!")
 
+# ================= WEBHOOK SETUP (Polling এর বদলে) =================
+async def on_startup(app):
+    # বট চালু হওয়ার সময় ওয়েবহুক সেট করা
+    webhook_url = f"{RENDER_URL}/webhook"
+    await bot.set_webhook(webhook_url, drop_pending_updates=True)
+    print(f"✅ Webhook set to {webhook_url}")
+
+async def on_shutdown(app):
+    # বট বন্ধ হওয়ার সময় ওয়েবহুক ডিলিট করা
+    await bot.delete_webhook()
+    print("❌ Webhook deleted")
+
+async def handle_webhook(request):
+    # টেলিগ্রাম থেকে আসা আপডেট প্রসেস করা
+    data = await request.json()
+    update = types.Update(**data)
+    await dp.feed_update(bot, update)
+    return web.Response(text="OK")
+
 # ================= APP START =================
 async def start_web():
     app = web.Application()
+    
+    # Webhook রুট
+    app.router.add_post('/webhook', handle_webhook)
+    
+    # API রুটগুলো
     app.router.add_get('/', ping)
     app.router.add_get('/api/user', get_user)
     app.router.add_post('/api/reward', add_reward)
@@ -268,16 +290,21 @@ async def start_web():
     app.router.add_post('/api/admin/update-balance', admin_update_balance)
     app.router.add_post('/api/admin/broadcast', admin_broadcast)
     
+    # Startup/Shutdown ইভেন্ট
+    app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
+    
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', PORT)
     await site.start()
+    print(f"✅ Web server started on port {PORT}")
 
 async def main():
     await start_web()
-    # বট চালু হওয়ার আগেই পুরোনো কানেকশন মুছে ফেলবে (Conflict Error ফিক্স)
-    await bot.delete_webhook(drop_pending_updates=True) 
-    await dp.start_polling(bot)
+    # Polling এর বদলে webhook ব্যবহার করা হচ্ছে, তাই এখানে polling থাকবে না
+    # Webhook সার্ভার aiohttp এর মাধ্যমে চলবে
+    await asyncio.Event().wait() # সার্ভার চালু রাখার জন্য
 
 if __name__ == "__main__":
     asyncio.run(main())
