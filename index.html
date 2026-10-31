@@ -215,9 +215,7 @@
         <!-- ================= হোম পেজ ================= -->
         <div id="homePage" class="page-section active">
             <div class="balance-card">
-                <!-- নতুন রিফ্রেশ বাটন -->
                 <button class="refresh-btn" onclick="fetchUserData()"><i class="fa-solid fa-rotate-right"></i></button>
-                
                 <h3><i class="fa-solid fa-wallet"></i> Total Balance</h3>
                 <h1 id="userBalance">$0.00</h1>
             </div>
@@ -617,16 +615,13 @@
                 document.getElementById('userAvatar').style.backgroundImage = `url(${avatar})`;
                 document.getElementById('profileAvatar').style.backgroundImage = `url(${avatar})`;
                 
-                // অ্যাপ ওপেন হওয়ার সাথে সাথে ডাটা ফেচ করবে
                 fetchUserData();
             }
         }
 
-        // ================= ডাটা ফেচ ও রিফ্রেশ =================
         async function fetchUserData() {
             if(!user) return;
             try {
-                // URL-এর শেষে টাইমস্ট্যাম্প (Date.now()) দেওয়া হলো যাতে ক্যাশ না ধরে
                 const res = await fetch(`${API_URL}/api/user?userId=${user.id}&t=${Date.now()}`);
                 if (!res.ok) throw new Error("Network response was not ok");
                 
@@ -637,8 +632,6 @@
                 loadWithdrawHistory();
             } catch(e) {
                 console.error("Error fetching data:", e);
-                // যদি এরর হয়, টোস্টে মেসেজ দেখাবে
-                showAlert("⚠️ Failed to load latest balance. Please check your internet.");
             }
         }
 
@@ -648,7 +641,6 @@
             document.getElementById(pageId).classList.add('active');
             element.classList.add('active');
             
-            // পেজ চেঞ্জ হলেই নতুন করে ডাটা লোড হবে
             if(pageId === 'walletPage') {
                 fetchUserData();
                 loadWithdrawHistory();
@@ -757,19 +749,22 @@
             }
         }
 
-        // ================= অ্যাড লিমিট =================
+        // ================= অ্যাড লিমিট (ইউজার আইডি সহ) =================
         function checkAdLimit() {
-            let adLimitStartTime = localStorage.getItem('adLimitStartTime');
-            let adsWatched = parseInt(localStorage.getItem('adsWatched') || '0');
+            if (!user) return 0;
+            
+            // এখানে ইউজার আইডি যুক্ত করা হয়েছে
+            let adLimitStartTime = localStorage.getItem('adLimitStartTime_' + user.id);
+            let adsWatched = parseInt(localStorage.getItem('adsWatched_' + user.id) || '0');
             let now = Date.now();
 
             if (adLimitStartTime) {
                 let timePassed = now - parseInt(adLimitStartTime);
                 let hoursPassed = timePassed / (1000 * 60 * 60);
                 if (hoursPassed >= 24) {
-                    localStorage.removeItem('adLimitStartTime');
+                    localStorage.removeItem('adLimitStartTime_' + user.id);
                     adsWatched = 0;
-                    localStorage.setItem('adsWatched', adsWatched);
+                    localStorage.setItem('adsWatched_' + user.id, adsWatched);
                 }
             }
 
@@ -781,8 +776,8 @@
                 adBtn.style.opacity = '0.5';
                 adBtn.style.pointerEvents = 'none';
                 adTimerText.style.display = 'block';
-                if(!localStorage.getItem('adLimitStartTime')) {
-                    localStorage.setItem('adLimitStartTime', Date.now());
+                if(!localStorage.getItem('adLimitStartTime_' + user.id)) {
+                    localStorage.setItem('adLimitStartTime_' + user.id, Date.now());
                 }
                 startAdCooldownTimer(); 
             } else {
@@ -797,9 +792,10 @@
         function startAdCooldownTimer() {
             if (adTimerInterval) clearInterval(adTimerInterval);
             const adTimerText = document.getElementById('adTimerText');
+            if(!user) return;
             
             adTimerInterval = setInterval(() => {
-                let adLimitStartTime = parseInt(localStorage.getItem('adLimitStartTime') || '0');
+                let adLimitStartTime = parseInt(localStorage.getItem('adLimitStartTime_' + user.id) || '0');
                 let now = Date.now();
                 let nextResetTime = adLimitStartTime + (24 * 60 * 60 * 1000);
                 let distance = nextResetTime - now;
@@ -835,11 +831,11 @@
                     document.getElementById('adCheckModal').style.display = 'none';
                     
                     if (adsWatched === 0) {
-                        localStorage.setItem('adLimitStartTime', Date.now());
+                        localStorage.setItem('adLimitStartTime_' + user.id, Date.now());
                     }
                     
                     adsWatched++;
-                    localStorage.setItem('adsWatched', adsWatched);
+                    localStorage.setItem('adsWatched_' + user.id, adsWatched);
                     checkAdLimit(); 
 
                     showAlert(`🎉 Ad verified! $${REWARD_PER_AD} added.`);
@@ -924,12 +920,13 @@
             });
         }
 
-        // ================= ডেইলি লাকি বক্স =================
+        // ================= ডেইলি লাকি বক্স (ইউজার আইডি সহ) =================
         let selectedReward = 0;
         let luckyTimerInterval = null;
 
         function startLuckyBoxTimer() {
-            const nextAvailable = localStorage.getItem('luckyBoxNextAvailable');
+            if(!user) return;
+            const nextAvailable = localStorage.getItem('luckyBoxNextAvailable_' + user.id);
             const timerText = document.getElementById('luckyBoxTimerText');
             const luckyBoxBtn = document.getElementById('luckyBoxBtn');
 
@@ -965,7 +962,8 @@
         }
 
         function openLuckyBox() {
-            const nextAvailable = localStorage.getItem('luckyBoxNextAvailable');
+            if(!user) return;
+            const nextAvailable = localStorage.getItem('luckyBoxNextAvailable_' + user.id);
             if (nextAvailable && new Date().getTime() < nextAvailable) {
                 showAlert("⏳ You have already claimed your daily bonus. Please come back later!");
                 return;
@@ -1030,7 +1028,7 @@
             document.getElementById('luckyBoxModal').style.display = 'none';
             
             const next24h = new Date().getTime() + (24 * 60 * 60 * 1000);
-            localStorage.setItem('luckyBoxNextAvailable', next24h);
+            localStorage.setItem('luckyBoxNextAvailable_' + user.id, next24h);
             
             startLuckyBoxTimer(); 
 
