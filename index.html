@@ -14,18 +14,8 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background: #0f0f13; color: #ffffff; min-height: 100vh; padding: 20px; padding-bottom: 80px; overflow-x: hidden; }
         
-        /* ================= ১. প্রিমিয়াম লোডার (নতুন আপডেট) ================= */
-        #loader { 
-            position: fixed; 
-            inset: 0; 
-            background: radial-gradient(circle, #1a1a24 0%, #08080a 100%); 
-            z-index: 99999; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            transition: opacity 0.6s ease, visibility 0.6s ease; 
-        }
+        /* ================= ১. প্রিমিয়াম লোডার ================= */
+        #loader { position: fixed; inset: 0; background: radial-gradient(circle, #1a1a24 0%, #08080a 100%); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.6s ease, visibility 0.6s ease; }
         .loader-wrapper { position: relative; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; }
         .loader-ring { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 3px solid transparent; border-top-color: #0088cc; border-right-color: rgba(0, 136, 204, 0.2); animation: ringSpin 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite; box-shadow: 0 0 15px rgba(0, 136, 204, 0.4); }
         .loader-ring-inner { position: absolute; width: 70%; height: 70%; border-radius: 50%; border: 3px solid transparent; border-bottom-color: #f39c12; border-left-color: rgba(243, 156, 18, 0.2); animation: ringSpinReverse 1s ease-in-out infinite; box-shadow: 0 0 12px rgba(243, 156, 18, 0.4); }
@@ -37,8 +27,6 @@
         @keyframes ringSpinReverse { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
         @keyframes pulseIcon { 0% { transform: scale(0.85); opacity: 0.7; } 100% { transform: scale(1.1); opacity: 1; } }
         @keyframes shineText { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
-        
-        /* এই pulse অ্যানিমেশনটি বাকি জায়গায় কাজে লাগে (যেমন: লাকি বক্স, এড বাটন) */
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
         /* ================= হেডার ================= */
@@ -48,9 +36,13 @@
         .avatar { width: 45px; height: 45px; border-radius: 50%; background: #0088cc; background-size: cover; border: 2px solid #005f8f; }
 
         /* ================= কার্ড স্টাইল ================= */
-        .balance-card { background: linear-gradient(135deg, #0088cc, #005f8f); padding: 30px 25px; border-radius: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0, 136, 204, 0.2); margin-bottom: 25px; }
+        .balance-card { background: linear-gradient(135deg, #0088cc, #005f8f); padding: 30px 25px; border-radius: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0, 136, 204, 0.2); margin-bottom: 25px; position: relative;}
         .balance-card h3 { font-size: 14px; font-weight: 400; opacity: 0.9; margin-bottom: 5px; }
         .balance-card h1 { font-size: 42px; font-weight: 700; margin-bottom: 5px; }
+        
+        /* রিফ্রেশ বাটন */
+        .refresh-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); border: none; color: #fff; width: 35px; height: 35px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.3s; }
+        .refresh-btn:active { transform: rotate(180deg); background: rgba(255,255,255,0.4); }
 
         /* ================= গ্রিড ================= */
         .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
@@ -103,7 +95,6 @@
         .method.usdt b { color: #26a17b; font-size: 15px; }
         .method.usdt i { font-size: 30px; color: #26a17b; margin-bottom: 10px; }
         
-        /* USDT Notice Box */
         .usdt-notice { background: linear-gradient(135deg, rgba(38, 161, 123, 0.15), rgba(0, 136, 204, 0.15)); border: 1px solid rgba(38, 161, 123, 0.3); padding: 12px; border-radius: 12px; margin-top: 15px; text-align: center; color: #26a17b; font-size: 14px; font-weight: 600; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .usdt-notice i { color: #f39c12; margin-right: 5px; animation: pulse 1.5s infinite; }
 
@@ -200,7 +191,7 @@
 </head>
 <body>
 
-    <!-- ১. নতুন প্রিমিয়াম লোডার -->
+    <!-- ১. প্রিমিয়াম লোডার -->
     <div id="loader">
         <div class="loader-wrapper">
             <div class="loader-ring"></div>
@@ -224,6 +215,9 @@
         <!-- ================= হোম পেজ ================= -->
         <div id="homePage" class="page-section active">
             <div class="balance-card">
+                <!-- নতুন রিফ্রেশ বাটন -->
+                <button class="refresh-btn" onclick="fetchUserData()"><i class="fa-solid fa-rotate-right"></i></button>
+                
                 <h3><i class="fa-solid fa-wallet"></i> Total Balance</h3>
                 <h1 id="userBalance">$0.00</h1>
             </div>
@@ -430,7 +424,6 @@
                 <p style="color: #888; font-size: 13px;">Telegram ID: <span id="profileId">...</span></p>
             </div>
             
-            <!-- Settings & Support Buttons -->
             <div class="settings-card" onclick="showAlert('Language settings coming soon!')">
                 <div>
                     <h4><i class="fa-solid fa-globe"></i> Language (English / বাংলা)</h4>
@@ -575,13 +568,12 @@
         let user = tg.initDataUnsafe?.user;
 
         const DAILY_AD_LIMIT = 10;
-        const REWARD_PER_AD = 0.02; // এডস রিওয়ার্ড
+        const REWARD_PER_AD = 0.02; 
         let adTimerInterval = null;
 
         const isAdminMode = window.location.hash === "#admin";
 
         window.addEventListener('load', () => {
-            // লোডার ২ সেকেন্ড দেখানোর পর হাইড হবে
             setTimeout(() => {
                 document.getElementById('loader').style.opacity = '0';
                 setTimeout(() => {
@@ -624,20 +616,30 @@
                 const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`;
                 document.getElementById('userAvatar').style.backgroundImage = `url(${avatar})`;
                 document.getElementById('profileAvatar').style.backgroundImage = `url(${avatar})`;
+                
+                // অ্যাপ ওপেন হওয়ার সাথে সাথে ডাটা ফেচ করবে
                 fetchUserData();
             }
         }
 
+        // ================= ডাটা ফেচ ও রিফ্রেশ =================
         async function fetchUserData() {
             if(!user) return;
             try {
-                const res = await fetch(`${API_URL}/api/user?userId=${user.id}`);
+                // URL-এর শেষে টাইমস্ট্যাম্প (Date.now()) দেওয়া হলো যাতে ক্যাশ না ধরে
+                const res = await fetch(`${API_URL}/api/user?userId=${user.id}&t=${Date.now()}`);
+                if (!res.ok) throw new Error("Network response was not ok");
+                
                 const data = await res.json();
                 document.getElementById('userBalance').innerText = `$${(data.balance || 0).toFixed(2)}`;
                 document.getElementById('walletBalance').innerText = `$${(data.balance || 0).toFixed(2)}`;
                 if (data.is_premium) document.getElementById('premiumBanner').style.display = 'none';
                 loadWithdrawHistory();
-            } catch(e) {}
+            } catch(e) {
+                console.error("Error fetching data:", e);
+                // যদি এরর হয়, টোস্টে মেসেজ দেখাবে
+                showAlert("⚠️ Failed to load latest balance. Please check your internet.");
+            }
         }
 
         function switchPage(pageId, element) {
@@ -645,10 +647,15 @@
             document.querySelectorAll('.nav-item').forEach(nav => { nav.classList.remove('active'); });
             document.getElementById(pageId).classList.add('active');
             element.classList.add('active');
-            if(pageId === 'walletPage') loadWithdrawHistory();
+            
+            // পেজ চেঞ্জ হলেই নতুন করে ডাটা লোড হবে
+            if(pageId === 'walletPage') {
+                fetchUserData();
+                loadWithdrawHistory();
+            }
         }
 
-        // ================= টাস্ক ওপেন ও ২৪ ঘণ্টার কুলডাউন ফাংশন =================
+        // ================= টাস্ক ওপেন ও ২৪ ঘণ্টার কুলডাউন =================
         function openTaskWithTimer(taskId, baseLink) {
             if (!user) return showAlert("User data not found!");
             
@@ -706,7 +713,7 @@
             });
         }
 
-        // ================= প্রিমিয়াম রিয়েল পেমেন্ট (Telegram Stars) =================
+        // ================= প্রিমিয়াম রিয়েল পেমেন্ট =================
         function buyPremium() {
             document.getElementById('premiumModal').style.display = 'flex';
         }
@@ -750,7 +757,7 @@
             }
         }
 
-        // ================= অ্যাড লিমিট ও ২৪ ঘণ্টার টাইমার =================
+        // ================= অ্যাড লিমিট =================
         function checkAdLimit() {
             let adLimitStartTime = localStorage.getItem('adLimitStartTime');
             let adsWatched = parseInt(localStorage.getItem('adsWatched') || '0');
@@ -856,7 +863,7 @@
             if(!user) return;
             const list = document.getElementById('withdrawHistoryList');
             try {
-                const res = await fetch(`${API_URL}/api/user/withdrawals?userId=${user.id}`);
+                const res = await fetch(`${API_URL}/api/user/withdrawals?userId=${user.id}&t=${Date.now()}`);
                 const wds = await res.json();
                 
                 if(!wds || wds.length === 0) {
@@ -917,7 +924,7 @@
             });
         }
 
-        // ================= ডেইলি লাকি বক্স লজিক =================
+        // ================= ডেইলি লাকি বক্স =================
         let selectedReward = 0;
         let luckyTimerInterval = null;
 
@@ -1048,7 +1055,7 @@
         async function loadAdminUsers() {
             const list = document.getElementById('adminUserList');
             try {
-                const res = await fetch(`${API_URL}/api/admin/users`);
+                const res = await fetch(`${API_URL}/api/admin/users?t=${Date.now()}`);
                 const users = await res.json();
                 if(users.length === 0) return list.innerHTML = "<p>No users.</p>";
 
@@ -1070,7 +1077,7 @@
         async function loadAdminWithdrawals() {
             const list = document.getElementById('adminWdList');
             try {
-                const res = await fetch(`${API_URL}/api/admin/withdrawals`);
+                const res = await fetch(`${API_URL}/api/admin/withdrawals?t=${Date.now()}`);
                 const wds = await res.json();
                 if(wds.length === 0) return list.innerHTML = "<p>No pending withdrawals.</p>";
 
