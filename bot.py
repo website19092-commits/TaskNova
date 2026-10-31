@@ -60,6 +60,10 @@ def get_help_keyboard():
 @dp.errors()
 async def errors_handler(update: types.Update, exception: Exception):
     print(f"⚠️ Bot Error: {exception}")
+    try:
+        if update.message:
+            await update.message.answer("⚠️ **An internal error occurred. Please try again.**\n**একটি সমস্যা হয়েছে। আবার চেষ্টা করুন।**")
+    except: pass
     return True
 
 # ================= TELEGRAM HANDLERS =================
@@ -121,7 +125,8 @@ async def cmd_admin(message: types.Message):
     )
     await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
 
-@dp.message(Command("balance") | (F.text == "💰 Balance"))
+# এখানে F.text.contains ব্যবহার করা হয়েছে যাতে ইমোজির জন্য বাটন কাজ না করার সমস্যা না হয়।
+@dp.message(Command("balance") | F.text.contains("Balance"))
 async def btn_balance(message: types.Message):
     try:
         user = db.reference(f'users/{message.from_user.id}').get()
@@ -129,9 +134,10 @@ async def btn_balance(message: types.Message):
         text = f"💰 **Total Balance / মোট ব্যালেন্স:** ${bal:.2f}"
         await message.answer(text, parse_mode="Markdown")
     except Exception as e:
+        print(f"Balance Error: {e}")
         await message.answer("⚠️ **Error loading balance.**\n**ব্যালেন্স লোড করতে সমস্যা হচ্ছে।**")
 
-@dp.message(Command("history") | (F.text == "📜 History"))
+@dp.message(Command("history") | F.text.contains("History"))
 async def btn_history(message: types.Message):
     try:
         uid = str(message.from_user.id)
@@ -171,7 +177,7 @@ async def btn_history(message: types.Message):
         print(f"History Error: {e}")
         await message.answer("⚠️ **Error loading history. Please try again later.**\n**হিস্ট্রি লোড করতে সমস্যা হচ্ছে। আবার চেষ্টা করুন।**")
 
-@dp.message(Command("refer") | (F.text == "👥 Referrals"))
+@dp.message(Command("refer") | F.text.contains("Referrals"))
 async def btn_referrals(message: types.Message):
     try:
         uid = str(message.from_user.id)
@@ -187,7 +193,7 @@ async def btn_referrals(message: types.Message):
     except Exception as e:
         await message.answer("⚠️ **Error loading referral link.**")
 
-@dp.message(Command("help") | (F.text == "💬 Help"))
+@dp.message(Command("help") | F.text.contains("Help"))
 async def btn_help(message: types.Message):
     text = (
         "💬 **Help & Support / হেল্প এবং সাপোর্ট**\n\n"
