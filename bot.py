@@ -33,7 +33,7 @@ try:
         firebase_admin.initialize_app(cred, {'databaseURL': FIREBASE_URL})
         print("✅ Firebase Connected Successfully!")
     else:
-        print("⚠️ Warning: FIREBASE_CREDENTIALS env variable not found. Database will not work.")
+        print("⚠️ Warning: FIREBASE_CREDENTIALS env variable not found.")
 except Exception as e:
     print(f"❌ Firebase Setup Error: {e}")
 
@@ -131,7 +131,7 @@ async def btn_balance(message: types.Message):
         text = f"💰 **Total Balance:** ${bal:.2f}\n\n💰 **মোট ব্যালেন্স:** ${bal:.2f}"
         await message.answer(text, parse_mode="Markdown")
     except Exception as e:
-        print(f"❌ Balance Error: {e}") # এরর লগে দেখাবে
+        print(f"❌ Balance Error: {e}")
         await message.answer("⚠️ **Error loading balance.**\n**ব্যালেন্স লোড করতে সমস্যা হচ্ছে।**")
 
 @dp.message(F.text.contains("History"))
@@ -163,7 +163,7 @@ async def btn_history(message: types.Message):
         final_text = eng_text + "\n" + bng_text
         await message.answer(final_text, parse_mode="Markdown")
     except Exception as e:
-        print(f"❌ History Error: {e}") # এরর লগে দেখাবে
+        print(f"❌ History Error: {e}")
         await message.answer("⚠️ **Error loading history.**\n**হিস্ট্রি লোড করতে সমস্যা হচ্ছে।**")
 
 @dp.message(F.text.contains("Referrals"))
@@ -475,8 +475,16 @@ async def start_web():
     print(f"✅ Web Server started on port {PORT}")
 
 async def main():
-    await start_web()
-    await asyncio.Event().wait()
+    try:
+        await start_web()
+        await asyncio.Event().wait()
+    except Exception as e:
+        print(f"⚠️ Main Error: {e}")
+    finally:
+        # সার্ভার বন্ধ হওয়ার আগে কানেকশনগুলো ঠিকমতো ক্লোজ করা
+        await bot.session.close()
+        await bot.close()
+        print("🛑 Bot session closed.")
 
 if __name__ == "__main__":
     asyncio.run(main())
