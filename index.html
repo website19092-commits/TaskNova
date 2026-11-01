@@ -147,18 +147,6 @@
         .settings-card h4 { font-size: 14px; color: #fff; }
         .settings-card p { font-size: 11px; color: #888; margin-top: 3px; }
 
-        #adminPanel { display: none; background: #0f0f13; min-height: 100vh; padding: 20px; position: fixed; inset: 0; z-index: 99999; overflow-y: auto; }
-        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
-        .admin-header h2 { color: #f39c12; font-size: 18px; }
-        .close-btn { background: #ff4f4f20; color: #ff4f4f; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer;}
-        .admin-card { background: #1e1e24; border: 1px solid #333; border-radius: 15px; padding: 15px; margin-bottom: 15px; }
-        .user-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333; }
-        .user-info b { color: #fff; display: block; font-size: 14px; }
-        .user-info small { color: #888; font-size: 11px; }
-        .btn-gold { padding: 6px 10px; border-radius: 6px; border: none; background: #f39c1220; color: #f39c12; font-weight: bold; font-size: 11px; cursor: pointer;}
-        .btn-red { padding: 6px 10px; border-radius: 6px; border: none; background: #ff4f4f20; color: #ff4f4f; font-weight: bold; font-size: 11px; cursor: pointer;}
-        .admin-input { width: 100%; padding: 12px; background: #121212; border: 1px solid #444; border-radius: 10px; color: #fff; margin-bottom: 10px; }
-
         #customToast { position: fixed; bottom: 100px; left: 50%; transform: translate(-50%, 20px); background: #0088cc; color: #fff; padding: 15px 25px; border-radius: 10px; font-size: 14px; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: 0.3s; z-index: 99999; text-align: center; width: max-content; max-width: 90%; }
 
         #premiumModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px); }
@@ -353,7 +341,7 @@
                     <img src="https://i.postimg.cc/2yy25Tf9/images-(1).png" alt="bKash">
                     <b>bKash</b>
                 </div>
-                <div class="method usdt" onclick="showAlert('🪙 USDT Withdraw is Coming Soon!')">
+                <div class="method usdt" onclick="showAlert('🪙 USDT Withdraw is Coming Soon!\n\nইউএসডিটি উইথড্র শীঘ্রই আসছে!')">
                     <i class="fa-brands fa-bitcoin"></i>
                     <b>USDT</b>
                 </div>
@@ -400,7 +388,8 @@
                 <i class="fa-solid fa-chevron-right" style="color:#888;"></i>
             </div>
 
-            <div class="settings-card" onclick="window.open('https://wa.me/880179136670', '_blank')">
+            <!-- এখানে onclick পরিবর্তন করা হয়েছে, সরাসরি লিংকে না গিয়ে পপ-আপ মেসেজ দেখাবে -->
+            <div class="settings-card" onclick="showWhatsAppPopup()">
                 <div>
                     <h4><i class="fa-brands fa-whatsapp"></i> WhatsApp Support</h4>
                     <p>Contact us on WhatsApp</p>
@@ -417,7 +406,7 @@
         </div>
     </div>
 
-    <!-- Modals (Withdraw, Premium, AdCheck, LuckyBox) are same as before -->
+    <!-- Modals -->
     <div id="withdrawModal">
         <div class="modal-content">
             <h3><i class="fa-brands fa-cash-register"></i> Withdraw via bKash</h3>
@@ -501,29 +490,19 @@
         const REWARD_PER_AD = 0.02; 
         let adTimerInterval = null;
 
-        const isAdminMode = window.location.href.includes('admin=1') || new URLSearchParams(window.location.search).get('admin') === '1';
-
         window.addEventListener('load', () => {
             setTimeout(() => {
                 document.getElementById('loader').style.opacity = '0';
                 setTimeout(() => {
                     document.getElementById('loader').style.display = 'none';
                     
-                    if (isAdminMode) {
-                        if (user && user.id.toString() === ADMIN_ID) {
-                            document.getElementById('adminPanel').style.display = 'block';
-                            loadAdminUsers();
-                            loadAdminWithdrawals();
-                        } else {
-                            showAlert("⛔ Access Denied. You are not logged in or not the admin.");
-                        }
-                    } else {
-                        document.getElementById('mainApp').style.display = 'block';
-                        initUser();
-                        checkAdLimit(); 
-                        startLuckyBoxTimer(); 
-                        checkAllTaskTimers();
-                    }
+                    // সরাসরি মেইন অ্যাপ ওপেন হবে, কোনো অ্যাডমিন চেক নেই
+                    document.getElementById('mainApp').style.display = 'block';
+                    initUser();
+                    checkAdLimit(); 
+                    startLuckyBoxTimer(); 
+                    checkAllTaskTimers();
+                    
                 }, 600); 
             }, 2000); 
         });
@@ -550,7 +529,6 @@
                 
                 const data = await res.json();
                 
-                // এখানে মাইনাস চিহ্ন দূর করার জন্য Math.max(0, ...) ব্যবহার করা হলো
                 let safeBalance = Math.max(0, data.balance || 0);
 
                 document.getElementById('userBalance').innerText = `$${safeBalance.toFixed(2)}`;
@@ -585,7 +563,7 @@
                 const hoursPassed = timePassed / (1000 * 60 * 60);
                 
                 if (hoursPassed < 24) {
-                    showAlert("⏳ You have already completed this task today. Please come back after 24 hours!");
+                    showAlert("⏳ You have already completed this task today. Please come back after 24 hours!\n\nআপনি আজ ইতিমধ্যে এই টাস্কটি সম্পন্ন করেছেন। ২৪ ঘণ্টা পর আবার চেষ্টা করুন!");
                     return;
                 } else {
                     localStorage.removeItem(cooldownKey); 
@@ -636,7 +614,7 @@
 
         async function payWithStars() {
             closePremiumModal();
-            showAlert("⏳ Invoice creating... Please wait!");
+            showAlert("⏳ Invoice creating... Please wait!\nইনভয়েস তৈরি হচ্ছে, অপেক্ষা করুন!");
             
             if (!user) return showAlert("User data not found!");
 
@@ -651,20 +629,20 @@
                 if (data.invoiceLink) {
                     tg.openInvoice(data.invoiceLink, (status) => {
                         if (status === 'paid') {
-                            showAlert("✅ Premium Activated successfully!\nEnjoy your rewards.");
+                            showAlert("✅ Premium Activated successfully!\nপ্রিমিয়াম সফলভাবে চালু হয়েছে!");
                             document.getElementById('premiumBanner').style.display = 'none';
                             fetchUserData(); 
                         } else if (status === 'cancelled') {
-                            showAlert("❌ Payment cancelled.");
+                            showAlert("❌ Payment cancelled.\nপেমেন্ট বাতিল করা হয়েছে।");
                         } else if (status === 'failed') {
-                            showAlert("❌ Payment failed. Please try again.");
+                            showAlert("❌ Payment failed. Please try again.\nপেমেন্ট ব্যর্থ হয়েছে। আবার চেষ্টা করুন।");
                         }
                     });
                 } else {
-                    showAlert("❌ Failed to create invoice. Try again.");
+                    showAlert("❌ Failed to create invoice. Try again.\nইনভয়েস তৈরি করতে ব্যর্থ। আবার চেষ্টা করুন।");
                 }
             } catch (e) {
-                showAlert("❌ Network Error!");
+                showAlert("❌ Network Error!\nনেটওয়ার্ক সমস্যা!");
             }
         }
 
@@ -734,7 +712,7 @@
         function watchAd() {
             let adsWatched = checkAdLimit();
             if (adsWatched >= DAILY_AD_LIMIT) {
-                showAlert("⏳ Your daily ad limit is over! Please wait.");
+                showAlert("⏳ Your daily ad limit is over! Please wait.\nআপনার আজকের এড লিমিট শেষ! অপেক্ষা করুন।");
                 return;
             }
 
@@ -755,7 +733,7 @@
                     localStorage.setItem('adsWatched_' + user.id, adsWatched);
                     checkAdLimit(); 
 
-                    showAlert(`🎉 Ad verified! $${REWARD_PER_AD} added.`);
+                    showAlert(`🎉 Ad verified! $${REWARD_PER_AD} added.\nএড ভেরিফাইড! $${REWARD_PER_AD} যোগ হয়েছে।`);
                     if(user) {
                         await fetch(`${API_URL}/api/reward`, {
                             method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -767,7 +745,7 @@
             }).catch(() => {
                 adBtn.style.pointerEvents = 'auto';
                 adBtn.style.opacity = '1';
-                showAlert("❌ Ad skipped or failed.");
+                showAlert("❌ Ad skipped or failed.\nএড স্কিপ বা ব্যর্থ হয়েছে।");
             });
         }
 
@@ -779,7 +757,7 @@
                 const wds = await res.json();
                 
                 if(!wds || wds.length === 0) {
-                    list.innerHTML = '<p style="color: #888; font-size: 12px;">No withdrawals yet.</p>';
+                    list.innerHTML = '<p style="color: #888; font-size: 12px;">No withdrawals yet. / কোনো উইথড্র নেই।</p>';
                     return;
                 }
 
@@ -793,7 +771,7 @@
                     </div>
                 `).join('');
             } catch(e) {
-                list.innerHTML = '<p style="color: #888; font-size: 12px;">Could not load history.</p>';
+                list.innerHTML = '<p style="color: #888; font-size: 12px;">Could not load history. / হিস্ট্রি লোড হয়নি।</p>';
             }
         }
 
@@ -804,8 +782,8 @@
             const amount = parseFloat(document.getElementById('withdrawAmount').value);
             const bkash = document.getElementById('bkashNumber').value;
 
-            if (!amount || amount < 1.00) return showAlert("Minimum withdraw is $1.00");
-            if (!/^01[0-9]{9}$/.test(bkash)) return showAlert("Invalid bKash Number!");
+            if (!amount || amount < 1.00) return showAlert("Minimum withdraw is $1.00\nসর্বনিম্ন উইথড্র $1.00");
+            if (!/^01[0-9]{9}$/.test(bkash)) return showAlert("Invalid bKash Number!\nসঠিক বিকাশ নাম্বার দিন!");
 
             try {
                 const res = await fetch(`${API_URL}/api/withdraw`, {
@@ -814,13 +792,13 @@
                 });
                 const data = await res.json();
                 if(data.status === "success") {
-                    showAlert("✅ Withdraw request submitted! Admin will review it.");
+                    showAlert("✅ Withdraw request submitted! Admin will review it.\nউইথড্র রিকোয়েস্ট সফল! অ্যাডমিন রিভিউ করবে।");
                     closeWithdraw();
                     fetchUserData(); 
                 } else {
                     showAlert("❌ Error: " + data.message);
                 }
-            } catch(e) { showAlert("❌ Network error."); }
+            } catch(e) { showAlert("❌ Network error.\nনেটওয়ার্ক সমস্যা।"); }
         }
 
         function openReferralModal() {
@@ -828,10 +806,16 @@
             const refLink = `https://t.me/SMTaskNova_bot?start=ref_${user.id}`; 
             
             navigator.clipboard.writeText(refLink).then(() => {
-                showAlert("✅ Referral link copied!\n\nShare with friends: " + refLink);
+                showAlert("✅ Referral link copied!\n\nShare with friends: " + refLink + "\n\nরেফারেল লিংক কপি হয়েছে! বন্ধুদের সাথে শেয়ার করুন।");
             }).catch(() => {
                 showAlert("Your Referral Link: " + refLink);
             });
+        }
+
+        // হোয়াটসঅ্যাপ পপ-আপ ফাংশন
+        function showWhatsAppPopup() {
+            const msg = "🔔 Support Notice\n\nTo solve your problem, please message us on Telegram first. We reply very fast there.\n👉 Telegram: @SM_Shakib_Hasan\n\nIf you do not receive a reply within 24 hours, then contact us on WhatsApp.\n📞 WhatsApp: 01794136670\n\n━━━━━━━━━━━━━━━\n\n🔔 সাপোর্ট নোটিশ\n\nআপনার মূল সমস্যা সমাধানের জন্য প্রথমে টেলিগ্রামে মেসেজ করুন। আমরা দ্রুত রিপ্লাই দেই।\n👉 টেলিগ্রাম: @SM_Shakib_Hasan\n\nযদি ২৪ ঘণ্টার মধ্যে রিপ্লাই না পান, তবে হোয়াটসঅ্যাপে যোগাযোগ করুন।\n📞 হোয়াটসঅ্যাপ: 01794136670";
+            showAlert(msg);
         }
 
         let selectedReward = 0;
@@ -878,7 +862,7 @@
             if(!user) return;
             const nextAvailable = localStorage.getItem('luckyBoxNextAvailable_' + user.id);
             if (nextAvailable && new Date().getTime() < nextAvailable) {
-                showAlert("⏳ You have already claimed your daily bonus. Please come back later!");
+                showAlert("⏳ You have already claimed your daily bonus. Please come back later!\nআপনি ইতিমধ্যে ডেইলি বোনাস নিয়েছেন। পরে আবার আসুন!");
                 return;
             }
 
@@ -946,7 +930,7 @@
             startLuckyBoxTimer(); 
 
             if (selectedReward > 0 && user) {
-                showAlert(`🎉 $${selectedReward} added to Balance!`);
+                showAlert(`🎉 $${selectedReward} added to Balance!\nব্যালেন্সে $${selectedReward} যোগ হয়েছে!`);
                 await fetch(`${API_URL}/api/reward`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ userId: user.id, amount: parseFloat(selectedReward) })
