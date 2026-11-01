@@ -47,7 +47,6 @@ def get_main_keyboard():
     )
 
 def get_help_keyboard():
-    # এখানে হোয়াটসঅ্যাপ বাটনটি URL এর বদলে Callback Data ব্যবহার করছে
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -83,7 +82,7 @@ async def cmd_start(message: types.Message):
                     ref_ref.child('balance').transaction(lambda current: max(0, (current or 0)) + 0.05)
                     ref_ref.child('refs').transaction(lambda current: (current or 0) + 1)
                     try:
-                        await bot.send_message(referrer_id, "🎉 **New Referral!**\n\nYou earned $0.05 for inviting a friend.\nআপনি এক বন্ধুকে ইনভাইট করার জন্য $0.05 পেয়েছেন।")
+                        await bot.send_message(referrer_id, "🎉 **New Referral!**\n\nYou earned $0.05 for inviting a friend.\n\n━━━━━━━━━━━━━━━\n\n🎉 **নতুন রেফারেল!**\n\nআপনি এক বন্ধুকে ইনভাইট করার জন্য $0.05 পেয়েছেন।")
                     except: pass
 
         if not user_data:
@@ -98,9 +97,10 @@ async def cmd_start(message: types.Message):
             })
             
         welcome_text = (
-            f"👑 **Welcome {message.from_user.first_name}!**\n"
+            f"👑 **Welcome {message.from_user.first_name}!**\n\n"
+            "👇 Click the Menu Button (☰) to open the App.\n\n"
+            "━━━━━━━━━━━━━━━\n\n"
             f"👑 **স্বাগতম {message.from_user.first_name}!**\n\n"
-            "👇 Click the Menu Button (☰) to open the App.\n"
             "👇 অ্যাপটি ওপেন করতে নিচের মেনু বাটনে (☰) ক্লিক করুন।"
         )
         
@@ -122,12 +122,13 @@ async def cmd_admin(message: types.Message):
     )
     await message.answer(text, parse_mode="Markdown", disable_web_page_preview=True)
 
+# ================= বাটন হ্যান্ডলার =================
 @dp.message(F.text.contains("Balance"))
 async def btn_balance(message: types.Message):
     try:
         user = db.reference(f'users/{message.from_user.id}').get()
         bal = max(0, float(user.get('balance', 0.0))) if user else 0.0
-        text = f"💰 **Total Balance / মোট ব্যালেন্স:**\n\n**${bal:.2f}**"
+        text = f"💰 **Total Balance:** ${bal:.2f}\n\n💰 **মোট ব্যালেন্স:** ${bal:.2f}"
         await message.answer(text, parse_mode="Markdown")
     except Exception as e:
         await message.answer("⚠️ **Error loading balance.**\n**ব্যালেন্স লোড করতে সমস্যা হচ্ছে।**")
@@ -139,21 +140,27 @@ async def btn_history(message: types.Message):
         withdrawals = db.reference('withdrawals').order_by_child('userId').equal_to(uid).get() or {}
         
         if not withdrawals:
-            return await message.answer("📜 **No withdrawal history found.**\n**কোনো উইথড্র হিস্ট্রি পাওয়া যায়নি।**")
+            return await message.answer("📜 **No withdrawal history found.**\n\n━━━━━━━━━━━━━━━\n\n📜 **কোনো উইথড্র হিস্ট্রি পাওয়া যায়নি।**")
         
         sorted_wds = sorted(withdrawals.values(), key=lambda x: str(x.get('date', '')), reverse=True)
-        text = "📜 **Your Recent Withdrawals:**\n**আপনার সাম্প্রতিক উইথড্রগুলো:**\n\n"
+        
+        eng_text = "📜 **Your Recent Withdrawals:**\n\n"
+        bng_text = "📜 **আপনার সাম্প্রতিক উইথড্রগুলো:**\n\n"
         
         for wd in sorted_wds[:5]:
             status_raw = str(wd.get('status', 'pending')).lower()
-            status = "🟡 Pending" if status_raw == 'pending' else ("🟢 Success" if status_raw == 'success' else "🔴 Rejected")
+            status_en = "🟡 Pending" if status_raw == 'pending' else ("🟢 Success" if status_raw == 'success' else "🔴 Rejected")
+            status_bn = "🟡 পেন্ডিং" if status_raw == 'pending' else ("🟢 সফল" if status_raw == 'success' else "🔴 বাতিল")
+            
             date_str = str(wd.get('date', ''))[:10] 
             amount = float(wd.get('amount', 0))
             method = str(wd.get('method', 'bKash')).capitalize()
             
-            text += f"💵 **${amount:.2f}** | {method}\n📌 Status: {status}\n📅 Date: {date_str}\n━━━━━━━━━━━━━━━\n"
+            eng_text += f"💵 **${amount:.2f}** | {method}\n📌 Status: {status_en}\n📅 Date: {date_str}\n━━━━━━━━━━━━━━━\n"
+            bng_text += f"💵 **${amount:.2f}** | {method}\n📌 স্ট্যাটাস: {status_bn}\n📅 তারিখ: {date_str}\n━━━━━━━━━━━━━━━\n"
             
-        await message.answer(text, parse_mode="Markdown")
+        final_text = eng_text + "\n" + bng_text
+        await message.answer(final_text, parse_mode="Markdown")
     except Exception as e:
         await message.answer("⚠️ **Error loading history.**\n**হিস্ট্রি লোড করতে সমস্যা হচ্ছে।**")
 
@@ -163,11 +170,13 @@ async def btn_referrals(message: types.Message):
         uid = str(message.from_user.id)
         ref_link = f"https://t.me/SMTaskNova_bot?start=ref_{uid}"
         text = (
-            "👥 **Invite & Earn:**\n"
+            "👥 **Invite & Earn:**\n\n"
+            "Share your link with friends and earn $0.05 for every new user!\n\n"
+            f"🔗 **Your Link:**\n`{ref_link}`\n\n"
+            "━━━━━━━━━━━━━━━\n\n"
             "👥 **ইনভাইট এবং আর্ন:**\n\n"
-            "Share your link with friends and earn $0.05 for every new user!\n"
             "আপনার বন্ধুদের সাথে লিংকটি শেয়ার করুন এবং প্রতিটি নতুন ইউজারের জন্য $0.05 আয় করুন!\n\n"
-            f"🔗 **Your Link / আপনার লিংক:**\n`{ref_link}`"
+            f"🔗 **আপনার লিংক:**\n`{ref_link}`"
         )
         await message.answer(text, parse_mode="Markdown")
     except Exception as e:
@@ -176,17 +185,18 @@ async def btn_referrals(message: types.Message):
 @dp.message(F.text.contains("Help"))
 async def btn_help(message: types.Message):
     text = (
-        "💬 **Help & Support:**\n"
+        "💬 **Help & Support:**\n\n"
+        "If you face any issues, please contact our support team below.\n\n"
+        "⚠️ **Warning:** Do not disturb without any valid reason.\n\n"
+        "👇 **Contact Options:**\n\n"
+        "━━━━━━━━━━━━━━━\n\n"
         "💬 **হেল্প এবং সাপোর্ট:**\n\n"
-        "If you face any issues, please contact our support team below.\n"
-        "যদি কোনো সমস্যা হয়, তবে নিচের সাপোর্ট টিমের সাথে যোগাযোগ করুন।\n\n"
-        "⚠️ **Warning:** Do not disturb without any valid reason.\n"
+        "যদি কোনো সমস্যা হয়, তবে নিচের সাপোর্ট টিমের সাথে যোগাযোগ করুন।\n\n"
         "⚠️ **সতর্কতা:** বিনা কারণে ডিসটার্ব করবেন না।\n\n"
-        "👇 **Contact Options / যোগাযোগের মাধ্যম:**"
+        "👇 **যোগাযোগের মাধ্যম:**"
     )
     await message.answer(text, reply_markup=get_help_keyboard(), parse_mode="Markdown")
 
-# হোয়াটসঅ্যাপ বাটনে ক্লিক করলে যে মেসেজ আসবে
 @dp.callback_query(F.data == "whatsapp_info")
 async def whatsapp_info_callback(callback: types.CallbackQuery):
     text = (
@@ -205,7 +215,7 @@ async def whatsapp_info_callback(callback: types.CallbackQuery):
     await callback.message.answer(text, parse_mode="Markdown")
     await callback.answer()
 
-# ================= PREMIUM (TELEGRAM STARS) =================
+# ================= PREMIUM =================
 @dp.pre_checkout_query()
 async def pre_checkout_handler(pre_checkout_query: PreCheckoutQuery):
     await pre_checkout_query.answer(ok=True)
@@ -216,7 +226,7 @@ async def success_payment_handler(message: Message):
     ref = db.reference(f'users/{uid}')
     if ref.get():
         ref.update({'is_premium': True})
-    await message.answer("🎉 **Premium Activated!**\n**প্রিমিয়াম চালু হয়েছে!**", parse_mode="Markdown")
+    await message.answer("🎉 **Premium Activated!**\n\n━━━━━━━━━━━━━━━\n\n🎉 **প্রিমিয়াম চালু হয়েছে!**", parse_mode="Markdown")
 
 # ================= API ENDPOINTS =================
 async def get_user(request):
