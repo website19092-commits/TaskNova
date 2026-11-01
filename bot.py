@@ -16,7 +16,7 @@ BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM"
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 ADMIN_ID = "8021210361"
 PORT = int(os.environ.get("PORT", 8080))
-RENDER_URL = "https://tasknova-1-sleq.onrender.com" # এখানে নতুন লিংক বসানো হয়েছে
+RENDER_URL = "https://tasknova-1-sleq.onrender.com"
 FIREBASE_URL = "https://tasknova-19cf2-default-rtdb.firebaseio.com/"
 
 POSTBACK_SECRET = "TaskNovaSecret123" 
@@ -33,7 +33,7 @@ try:
         firebase_admin.initialize_app(cred, {'databaseURL': FIREBASE_URL})
         print("✅ Firebase Connected Successfully!")
     else:
-        print("⚠️ Warning: FIREBASE_CREDENTIALS env variable not found.")
+        print("⚠️ Warning: FIREBASE_CREDENTIALS env variable not found. Database will not work.")
 except Exception as e:
     print(f"❌ Firebase Setup Error: {e}")
 
@@ -131,6 +131,7 @@ async def btn_balance(message: types.Message):
         text = f"💰 **Total Balance:** ${bal:.2f}\n\n💰 **মোট ব্যালেন্স:** ${bal:.2f}"
         await message.answer(text, parse_mode="Markdown")
     except Exception as e:
+        print(f"❌ Balance Error: {e}") # এরর লগে দেখাবে
         await message.answer("⚠️ **Error loading balance.**\n**ব্যালেন্স লোড করতে সমস্যা হচ্ছে।**")
 
 @dp.message(F.text.contains("History"))
@@ -162,6 +163,7 @@ async def btn_history(message: types.Message):
         final_text = eng_text + "\n" + bng_text
         await message.answer(final_text, parse_mode="Markdown")
     except Exception as e:
+        print(f"❌ History Error: {e}") # এরর লগে দেখাবে
         await message.answer("⚠️ **Error loading history.**\n**হিস্ট্রি লোড করতে সমস্যা হচ্ছে।**")
 
 @dp.message(F.text.contains("Referrals"))
@@ -231,24 +233,32 @@ async def success_payment_handler(message: Message):
 # ================= API ENDPOINTS =================
 async def get_user(request):
     user_id = request.query.get("userId")
-    user = db.reference(f'users/{user_id}').get()
-    if user:
-        if user.get('banned', False):
-            return web.json_response({"error": "banned"})
-        return web.json_response({
-            "balance": max(0, user.get('balance', 0.0)),
-            "is_premium": user.get('is_premium', False)
-        })
-    return web.json_response({"balance": 0, "is_premium": False})
+    try:
+        user = db.reference(f'users/{user_id}').get()
+        if user:
+            if user.get('banned', False):
+                return web.json_response({"error": "banned"})
+            return web.json_response({
+                "balance": max(0, user.get('balance', 0.0)),
+                "is_premium": user.get('is_premium', False)
+            })
+        return web.json_response({"balance": 0, "is_premium": False})
+    except Exception as e:
+        print(f"❌ API get_user Error: {e}")
+        return web.json_response({"error": "database"}, status=500)
 
 async def add_reward(request):
     data = await request.json()
     uid = str(data.get("userId"))
     amt = float(data.get("amount", 0))
-    ref = db.reference(f'users/{uid}')
-    if ref.get():
-        ref.child('balance').transaction(lambda current: max(0, (current or 0)) + amt)
-    return web.json_response({"status": "success"})
+    try:
+        ref = db.reference(f'users/{uid}')
+        if ref.get():
+            ref.child('balance').transaction(lambda current: max(0, (current or 0)) + amt)
+        return web.json_response({"status": "success"})
+    except Exception as e:
+        print(f"❌ API add_reward Error: {e}")
+        return web.json_response({"status": "error"}, status=500)
 
 async def create_invoice(request):
     data = await request.json()
@@ -267,28 +277,36 @@ async def submit_withdraw(request):
     amount = float(data.get("amount"))
     method = data.get("method")
     number = data.get("number")
-    ref = db.reference(f'users/{uid}')
-    user = ref.get()
-    
-    if user and max(0, user.get('balance', 0)) >= amount:
-        ref.child('balance').transaction(lambda current: max(0, (current or 0) - amount))
-        ref.child('hold_balance').transaction(lambda current: (current or 0) + amount)
+    try:
+        ref = db.reference(f'users/{uid}')
+        user = ref.get()
         
-        wd_id = str(uuid.uuid4())[:8]
-        db.reference(f'withdrawals/{wd_id}').set({
-            "userId": uid, "name": user.get('name', 'User'),
-            "amount": amount, "method": method, "number": number,
-            "status": "pending", "date": datetime.datetime.now().isoformat()
-        })
-        return web.json_response({"status": "success"})
-    return web.json_response({"status": "error", "message": "Insufficient balance"})
+        if user and max(0, user.get('balance', 0)) >= amount:
+            ref.child('balance').transaction(lambda current: max(0, (current or 0) - amount))
+            ref.child('hold_balance').transaction(lambda current: (current or 0) + amount)
+            
+            wd_id = str(uuid.uuid4())[:8]
+            db.reference(f'withdrawals/{wd_id}').set({
+                "userId": uid, "name": user.get('name', 'User'),
+                "amount": amount, "method": method, "number": number,
+                "status": "pending", "date": datetime.datetime.now().isoformat()
+            })
+            return web.json_response({"status": "success"})
+        return web.json_response({"status": "error", "message": "Insufficient balance"})
+    except Exception as e:
+        print(f"❌ API submit_withdraw Error: {e}")
+        return web.json_response({"status": "error", "message": "Database error"}, status=500)
 
 async def get_user_withdrawals(request):
     uid = request.query.get("userId")
-    withdrawals = db.reference('withdrawals').order_by_child('userId').equal_to(uid).get() or {}
-    result = [dict(v, id=k) for k, v in withdrawals.items()]
-    result.sort(key=lambda x: x.get('date', ''), reverse=True)
-    return web.json_response(result)
+    try:
+        withdrawals = db.reference('withdrawals').order_by_child('userId').equal_to(uid).get() or {}
+        result = [dict(v, id=k) for k, v in withdrawals.items()]
+        result.sort(key=lambda x: x.get('date', ''), reverse=True)
+        return web.json_response(result)
+    except Exception as e:
+        print(f"❌ API get_user_withdrawals Error: {e}")
+        return web.json_response({"error": "database"}, status=500)
 
 # ================= ADMIN API =================
 async def admin_get_users(request):
