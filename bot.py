@@ -16,7 +16,7 @@ BOT_TOKEN = "8715331593:AAEfoIGR79bdlR_x0k3Fo-8WEozphW_Z8KM"
 WEB_APP_URL = "https://website19092-commits.github.io/TaskNova/"
 ADMIN_ID = "8021210361"
 PORT = int(os.environ.get("PORT", 8080))
-RENDER_URL = "https://tasknova-6mjt.onrender.com"
+RENDER_URL = "https://tasknova-1-sleq.onrender.com" # এখানে নতুন লিংক বসানো হয়েছে
 FIREBASE_URL = "https://tasknova-19cf2-default-rtdb.firebaseio.com/"
 
 POSTBACK_SECRET = "TaskNovaSecret123" 
