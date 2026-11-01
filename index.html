@@ -388,7 +388,6 @@
                 <i class="fa-solid fa-chevron-right" style="color:#888;"></i>
             </div>
 
-            <!-- এখানে onclick পরিবর্তন করা হয়েছে, সরাসরি লিংকে না গিয়ে পপ-আপ মেসেজ দেখাবে -->
             <div class="settings-card" onclick="showWhatsAppPopup()">
                 <div>
                     <h4><i class="fa-brands fa-whatsapp"></i> WhatsApp Support</h4>
@@ -496,7 +495,6 @@
                 setTimeout(() => {
                     document.getElementById('loader').style.display = 'none';
                     
-                    // সরাসরি মেইন অ্যাপ ওপেন হবে, কোনো অ্যাডমিন চেক নেই
                     document.getElementById('mainApp').style.display = 'block';
                     initUser();
                     checkAdLimit(); 
@@ -812,7 +810,6 @@
             });
         }
 
-        // হোয়াটসঅ্যাপ পপ-আপ ফাংশন
         function showWhatsAppPopup() {
             const msg = "🔔 Support Notice\n\nTo solve your problem, please message us on Telegram first. We reply very fast there.\n👉 Telegram: @SM_Shakib_Hasan\n\nIf you do not receive a reply within 24 hours, then contact us on WhatsApp.\n📞 WhatsApp: 01794136670\n\n━━━━━━━━━━━━━━━\n\n🔔 সাপোর্ট নোটিশ\n\nআপনার মূল সমস্যা সমাধানের জন্য প্রথমে টেলিগ্রামে মেসেজ করুন। আমরা দ্রুত রিপ্লাই দেই।\n👉 টেলিগ্রাম: @SM_Shakib_Hasan\n\nযদি ২৪ ঘণ্টার মধ্যে রিপ্লাই না পান, তবে হোয়াটসঅ্যাপে যোগাযোগ করুন।\n📞 হোয়াটসঅ্যাপ: 01794136670";
             showAlert(msg);
