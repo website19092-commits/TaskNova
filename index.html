@@ -29,9 +29,11 @@
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        .user-info h2 { font-size: 18px; font-weight: 600; }
+        .user-info h2 { font-size: 18px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
         .user-info p { font-size: 12px; color: #888; }
         .avatar { width: 45px; height: 45px; border-radius: 50%; background: #0088cc; background-size: cover; border: 2px solid #005f8f; }
+
+        .verified-badge { width: 18px; height: 18px; object-fit: contain; display: inline-block; vertical-align: middle; }
 
         .balance-card { background: linear-gradient(135deg, #0088cc, #005f8f); padding: 30px 25px; border-radius: 20px; text-align: center; box-shadow: 0 10px 20px rgba(0, 136, 204, 0.2); margin-bottom: 25px; position: relative;}
         .balance-card h3 { font-size: 14px; font-weight: 400; opacity: 0.9; margin-bottom: 5px; }
@@ -166,14 +168,14 @@
             <div class="loader-ring-inner"></div>
             <i class="fa-solid fa-bolt loader-center-icon"></i>
         </div>
-        <div class="loader-text">SM. TaskNova</div>
+        <div class="loader-text">SM. TaskNova <img id="loaderVerifiedBadge" src="https://i.postimg.cc/ZRdwV2vg/verified.png" class="verified-badge" style="display: none;" alt="Verified"></div>
         <div class="loader-subtext">Loading Experience...</div>
     </div>
 
     <div id="mainApp" style="display: none;">
         <div class="header">
             <div class="user-info">
-                <h2 id="userName">Loading...</h2>
+                <h2><span id="userName">Loading...</span> <img id="headerVerifiedBadge" src="https://i.postimg.cc/ZRdwV2vg/verified.png" class="verified-badge" style="display: none;" alt="Verified"></h2>
                 <p>ID: <span id="userId">...</span></p>
             </div>
             <div class="avatar" id="userAvatar"></div>
@@ -473,7 +475,6 @@
         const tg = window.Telegram.WebApp;
         tg.expand(); tg.ready();
 
-        // এখানে নতুন লিংক বসানো হয়েছে
         const API_URL = "https://tasknova-1-sleq.onrender.com"; 
         const ADMIN_ID = "8021210361";
         let user = tg.initDataUnsafe?.user;
@@ -532,7 +533,17 @@
 
                 document.getElementById('userBalance').innerText = `$${safeBalance.toFixed(2)}`;
                 document.getElementById('walletBalance').innerText = `$${safeBalance.toFixed(2)}`;
-                if (data.is_premium) document.getElementById('premiumBanner').style.display = 'none';
+                
+                if (data.is_premium) {
+                    document.getElementById('premiumBanner').style.display = 'none';
+                    document.getElementById('headerVerifiedBadge').style.display = 'inline-block';
+                    document.getElementById('loaderVerifiedBadge').style.display = 'inline-block';
+                } else {
+                    document.getElementById('headerVerifiedBadge').style.display = 'none';
+                    document.getElementById('loaderVerifiedBadge').style.display = 'none';
+                }
+
+                checkAdLimit();
                 loadWithdrawHistory();
             } catch(e) {
                 console.error("Error fetching data:", e);
@@ -648,6 +659,18 @@
         function checkAdLimit() {
             if (!user) return 0;
             
+            // নতুন চেক: হেডারের ভেরিফাইড ব্যাজ দৃশ্যমান থাকলে প্রিমিয়াম হিসেবে লিমিট বাইপাস হবে
+            const headerBadge = document.getElementById('headerVerifiedBadge');
+            if (headerBadge && headerBadge.style.display === 'inline-block') {
+                document.getElementById('adLimitText').innerText = "Unlimited Ads ⚡";
+                const adBtn = document.getElementById('adBtn');
+                adBtn.style.opacity = '1';
+                adBtn.style.pointerEvents = 'auto';
+                document.getElementById('adTimerText').style.display = 'none';
+                if (adTimerInterval) clearInterval(adTimerInterval);
+                return 999;
+            }
+            
             let adLimitStartTime = localStorage.getItem('adLimitStartTime_' + user.id);
             let adsWatched = parseInt(localStorage.getItem('adsWatched_' + user.id) || '0');
             let now = Date.now();
@@ -710,7 +733,7 @@
 
         function watchAd() {
             let adsWatched = checkAdLimit();
-            if (adsWatched >= DAILY_AD_LIMIT) {
+            if (adsWatched < 999 && adsWatched >= DAILY_AD_LIMIT) {
                 showAlert("⏳ Your daily ad limit is over! Please wait.\nআপনার আজকের এড লিমিট শেষ! অপেক্ষা করুন।");
                 return;
             }
@@ -724,12 +747,14 @@
                 setTimeout(async () => {
                     document.getElementById('adCheckModal').style.display = 'none';
                     
-                    if (adsWatched === 0) {
-                        localStorage.setItem('adLimitStartTime_' + user.id, Date.now());
+                    if (adsWatched < 999) {
+                        if (adsWatched === 0) {
+                            localStorage.setItem('adLimitStartTime_' + user.id, Date.now());
+                        }
+                        adsWatched++;
+                        localStorage.setItem('adsWatched_' + user.id, adsWatched);
                     }
                     
-                    adsWatched++;
-                    localStorage.setItem('adsWatched_' + user.id, adsWatched);
                     checkAdLimit(); 
 
                     showAlert(`🎉 Ad verified! $${REWARD_PER_AD} added.\nএড ভেরিফাইড! $${REWARD_PER_AD} যোগ হয়েছে।`);
